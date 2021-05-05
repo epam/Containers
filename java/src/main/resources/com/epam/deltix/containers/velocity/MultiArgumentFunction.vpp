@@ -1,0 +1,46 @@
+package com.epam.deltix.containers.generated;
+
+
+import java.util.Objects;
+
+
+@FunctionalInterface
+public interface Obj${value}Function<T1## 
+#if($value > 1)## 
+#foreach ($index in [2..$value]) 
+, T${index}##
+#end 
+#end, R> {
+    R apply(T1 argument1##
+#if($value > 1)##                   
+#foreach ($index in [2..$value])##
+, T${index} argument${index}##
+#end## 
+#end##
+);
+    default <V> Obj${value}Function<T1## 
+#if($value > 1) 
+#foreach ($index in [2..$value])
+, T${index}##
+#end 
+#end
+, V> andThen(Obj1Function<? super R, ? extends V> after) {
+        Objects.requireNonNull(after);
+        return (argument1##
+#if($value > 1)##                   
+#foreach ($index in [2..$value])##
+, argument${index}##
+#end
+#end
+) -> ##          
+after.apply(apply(argument1##
+#if($value > 1)##                   
+#foreach ($index in [2..$value])##
+, argument${index}##
+#end
+#end
+)); 
+ 
+     
+    }    
+} 

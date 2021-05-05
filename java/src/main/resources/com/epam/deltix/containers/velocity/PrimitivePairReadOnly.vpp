@@ -1,0 +1,27 @@
+package com.epam.deltix.containers.generated;
+#if (${first_name} == "Decimal" || ${second_name} == "Decimal")
+import com.epam.deltix.dfp.Decimal64;
+#end
+
+
+/**
+ * Public interface for storing pair of item's. First item is ${first_type}, second is ${second_type}.
+ */
+
+
+public interface ${first_name}${second_name}PairReadOnly {
+    /**
+     * Get second item of this pair.
+     * @return Second item of this pair.
+     */
+    
+    public ${second_type} getSecond();
+
+    /**
+     * Get first item of this pair.
+     * @return First item of this pair.
+     */
+    public ${first_type} getFirst();
+
+    public void copyTo(${first_name}${second_name}Pair destination);
+}

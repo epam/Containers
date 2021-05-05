@@ -1,0 +1,163 @@
+package com.epam.deltix.containers.generated;
+
+#if (${name} == "Decimal")
+import com.epam.deltix.dfp.Decimal64;
+#end
+#if (${name} == "DecimalLong")
+import com.epam.deltix.dfp.Decimal64Utils;
+#end
+
+
+
+
+/**
+ * Public class for store pair of item's. First item is object, second is ${type}.
+ */
+
+
+public class Obj${name}Pair<T> implements Obj${name}PairReadOnly<T> {
+    
+    private int firstHashFunction(${type} value) {
+    	#if (${name} == "Obj")
+    	if (value == null) return 0; else return value.hashCode();
+    	#elseif (${name} == "Int") 
+    	return Math.abs(value);
+    	#elseif (${name} == "Short") 
+    	return Math.abs((int)value);
+    	#elseif (${name} == "Char") 
+    	return Math.abs((int)value);
+    	#elseif (${name} == "Byte") 
+    	return Math.abs((int)value);
+    	#elseif (${name} == "Long")
+    	return Math.abs((int)value);
+    	#elseif (${name} == "Float")
+    	return Math.abs(Float.floatToRawIntBits(value));
+    	#elseif (${name} == "Double") 
+    	return Math.abs((int)Double.doubleToRawLongBits(value));
+    	#elseif (${name} == "Decimal") 
+    	return Math.abs((int)value.hashCode());
+    	#elseif (${name} == "DecimalLong") 
+    	return Math.abs((int)Decimal64Utils.hashCode(value));
+    	#else 
+    	return 0;
+    	#end
+    }
+
+    
+    /**
+     * Get second item of this pair.
+     * @return Second item of this pair.
+     */
+    @Override
+    public ${type} getSecond() {
+        return second;
+    }
+
+    /**
+     * Set second item of this pair to new value.
+     * @param second New value of second item.
+     */
+    public void setSecond(${type} second) {
+        this.second = second;
+    }
+
+    /**
+     * Get first item of this pair.
+     * @return First item of this pair.
+     */
+    @Override
+    public T getFirst() {
+        return first;
+    }
+
+    /**
+     * Set first item of this pair to new value.
+     * @param first New value of first item.
+     */
+    public void setFirst(T first) {
+        this.first = first;
+    }
+
+    T first;
+    ${type} second;
+
+
+    /**
+     * Init this pair by data.
+     * @param first New value of first item.
+     * @param second New value of second item.
+     */
+    public void init(T first, ${type} second) {
+        this.first = first;
+        this.second = second;
+    }
+
+    /**
+     * Create new instance of pair.
+     * @param first New value of first item.
+     * @param second New value of second item.
+     */
+    public Obj${name}Pair(T first, ${type} second) {
+        this.first = first;
+        this.second = second;
+    }
+
+    /**
+     * Create new instance of pair without initialization.
+     */
+    public Obj${name}Pair() {
+
+    }
+
+    @Override
+    public void copyTo(Obj${name}Pair<T> destination) {
+    	destination.init(first, second);
+    }
+
+    @Override
+    public Obj${name}Pair<T> clone() {
+        Obj${name}Pair<T> destination = new Obj${name}Pair<T>();
+        copyTo(destination);
+        return destination;
+    }
+
+
+
+
+    @Override
+    public int hashCode() {
+    	int hash = 0;
+    	if (first != null) hash = first.hashCode();
+    	return firstHashFunction(second) ^ (hash * 31);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder str = new StringBuilder();
+    	if (first == null) str.append("null, "); else str.append(first.toString()).append(", "); 
+    	str.append(${type_Object}.toString(second)).append(')');
+    	return str.toString();
+    }
+
+    @Override
+    public boolean equals(Object other) {
+    	if (other instanceof Obj${name}PairReadOnly) {
+    	    Obj${name}PairReadOnly pair = (Obj${name}PairReadOnly)other;
+    	    #if (${name} == "DecimalLong")
+    	    boolean secondEquals = (Decimal64Utils.equals(second, pair.getSecond()));
+    	    #elseif (${name} == "Decimal") 
+    	    boolean secondEquals = (second.equals(pair.getSecond()));
+    	    #else
+    	    boolean secondEquals = (second == pair.getSecond());
+    	    #end
+    	    if (first == null) {
+    	    	if (pair.getFirst() != null) return false;
+    	    	return secondEquals;
+    	    }
+    	    return first.equals(pair.getFirst()) && secondEquals;
+    	} 
+    	return false;
+    }
+
+
+}

@@ -1,0 +1,353 @@
+apply plugin: 'java-library'
+apply plugin: 'maven-publish'
+apply plugin: 'me.champeau.gradle.jmh'
+apply plugin: 'velocity'
+
+jmh {
+    jmhVersion = '1.18'
+    include = '.*Benchmark.*'
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'com.epam.deltix', name: 'gradle-velocity-plugin', version: '1.2.2'
+    }
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation group: 'junit', name: 'junit', version: '4.+'
+    implementation 'com.epam.deltix:dfp:0.11.01'
+    implementation 'com.epam.deltix:hd-date-time:0.2.4'
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+def generatedDirectory = file('build/generated-src/main')
+sourceSets.main.java.srcDirs generatedDirectory
+
+ext {
+    srcDir = "src/main/resources/com/epam/deltix/containers/velocity"
+    dstDir = generatedDirectory.toString() + "/com/epam/deltix/containers/generated"
+
+    types = [:]
+
+    types.char = [name: 'Char', 'name_abbr': 'Char', type: 'char', 'type_Object': 'Character', size: 'SIZE_OF_CHAR']
+    types.byte = [name: 'Byte', 'name_abbr': 'Byte', type: 'byte', 'type_Object': 'Byte', size: 'SIZE_OF_BYTE']
+    types.short = [name: 'Short', 'name_abbr': 'Short', type: 'short', 'type_Object': 'Short', size: 'SIZE_OF_SHORT']
+    types.int = [name: 'Int', 'name_abbr': 'Int', type: 'int', 'type_Object': 'Integer', size: 'SIZE_OF_INT']
+    types.long = [name: 'Long', 'name_abbr': 'Long', type: 'long', 'type_Object': 'Long', size: 'SIZE_OF_LONG']
+    types.float = [name: 'Float', 'name_abbr': 'Float', type: 'float', 'type_Object': 'Float', size: 'SIZE_OF_FLOAT']
+    types.double = [name: 'Double', 'name_abbr': 'Double', type: 'double', 'type_Object': 'Double', size: 'SIZE_OF_DOUBLE']
+    types.boolean = [name: 'Bool', 'name_abbr': 'Boolean', type: 'boolean', 'type_Object': 'Boolean', size: 'SIZE_OF_BOOLEAN']
+    types.Object = [name: 'Obj', 'name_abbr': 'Object', type: 'Object', 'type_Object': 'ObjectType', size: 'SIZE_OF_POINTER']
+    types.Decimal = [name: 'Decimal', 'name_abbr': 'Decimal', type: 'Decimal64', 'type_Object': 'Decimal64', size: 'SIZE_OF_DECIMAL']
+    types.DecimalLong = [name: 'DecimalLong', 'name_abbr': 'DecimalLong', type: 'long', 'type_Object': 'Decimal64Utils', size: 'SIZE_OF_LONG']
+    types.CharSequence = [name: 'CharSequence', 'name_abbr' : 'CharSequence', type: 'CharSequence', 'type_Object' : 'CharSequenceUtils', size: 'SIZE_OF_CHAR_SEQUENCE']
+
+    indexes = [:]
+
+    indexes.Optimization0 = [value: 0]
+    indexes.Optimization1 = [value: 1]
+    indexes.Optimization2 = [value: 2]
+    indexes.Optimization3 = [value: 3]
+    indexes.Optimization4 = [value: 4]
+    indexes.Optimization5 = [value: 5]
+    indexes.Optimization6 = [value: 6]
+    indexes.Optimization7 = [value: 7]
+    indexes.Optimization8 = [value: 8]
+
+    indexes.Consumer1 = [value: 1]
+    indexes.Consumer2 = [value: 2]
+    indexes.Consumer3 = [value: 3]
+    indexes.Consumer4 = [value: 4]
+    indexes.Consumer5 = [value: 5]
+    indexes.Consumer6 = [value: 6]
+    indexes.Consumer7 = [value: 7]
+    indexes.Consumer8 = [value: 8]
+    indexes.Consumer9 = [value: 9]
+    indexes.Consumer10 = [value: 10]
+
+    indexes.Tuples3 = [value: 3]
+    indexes.Tuples4 = [value: 4]
+    indexes.Tuples5 = [value: 5]
+    indexes.Tuples6 = [value: 6]
+    indexes.Tuples7 = [value: 7]
+    indexes.Tuples8 = [value: 8]
+    indexes.Tuples9 = [value: 9]
+    indexes.Tuples10 = [value: 10]
+}
+
+velocity {
+
+    ringedQueue {
+        from = "$srcDir/RingedQueue.vpp"
+        to = "$dstDir/@{name}RingedQueue.java"
+        contexts = [types.byte, types.char, types.short, types.int, types.long, types.double, types.boolean, types.Decimal, types.DecimalLong]
+    }
+    
+    
+    optimizations {
+        from = "$srcDir/BinaryArrayOptimization.vpp"
+        to = "$dstDir/BinaryArrayOptimization@{value}.java"
+        contexts = [indexes.Optimization0, indexes.Optimization1, indexes.Optimization2, indexes.Optimization3, indexes.Optimization4, indexes.Optimization5, indexes.Optimization6, indexes.Optimization7, indexes.Optimization8]
+    }
+
+    consumers {
+        from = "$srcDir/MultiArgumentConsumer.vpp"
+        to = "$dstDir/Obj@{value}Consumer.java"
+        contexts = [indexes.Consumer1, indexes.Consumer2, indexes.Consumer3, indexes.Consumer4, indexes.Consumer5, indexes.Consumer6, indexes.Consumer7, indexes.Consumer8, indexes.Consumer9, indexes.Consumer10]
+    }
+
+    functions {
+        from = "$srcDir/MultiArgumentFunction.vpp"
+        to = "$dstDir/Obj@{value}Function.java"
+        contexts = [indexes.Consumer1, indexes.Consumer2, indexes.Consumer3, indexes.Consumer4, indexes.Consumer5, indexes.Consumer6, indexes.Consumer7, indexes.Consumer8, indexes.Consumer9, indexes.Consumer10]
+    }
+
+    tuplesReadOnly {
+        from = "$srcDir/TuplesReadOnly.vpp"
+        to = "$dstDir/TupleObj@{value}ReadOnly.java" 
+        contexts = [indexes.Tuples3, indexes.Tuples4, indexes.Tuples5, indexes.Tuples6, indexes.Tuples7, indexes.Tuples8, indexes.Tuples9, indexes.Tuples10]
+    }    
+    
+    tuples {
+        from = "$srcDir/Tuples.vpp"
+        to = "$dstDir/TupleObj@{value}.java" 
+        contexts = [indexes.Tuples3, indexes.Tuples4, indexes.Tuples5, indexes.Tuples6, indexes.Tuples7, indexes.Tuples8, indexes.Tuples9, indexes.Tuples10]
+    }
+
+    primitiveconsumers {
+        from = "$srcDir/PrimitiveConsumer1.vpp"
+        to = "$dstDir/@{name}Consumer.java"
+        contexts = [types.byte, types.char, types.short, types.int, types.long, types.double, types.Object, types.boolean]
+    }
+
+
+    primitivepairfirstobj {
+        from = "$srcDir/PrimitivePairFirstObj.vpp"
+        to = "$dstDir/Obj@{name}Pair.java"
+        contexts = [types.byte, types.char, types.short, types.int, types.long, types.float, types.double, types.boolean, types.Decimal, types.DecimalLong]
+    }                                                                                                                      
+
+
+    primitivepairsecondobj {
+        from = "$srcDir/PrimitivePairSecondObj.vpp"
+        to = "$dstDir/@{name}ObjPair.java"
+        contexts = [types.byte, types.char, types.short, types.int, types.long, types.float, types.double, types.boolean, types.Decimal, types.DecimalLong]
+    }
+
+
+    primitivepairfirstobjreadonly {
+        from = "$srcDir/PrimitivePairFirstObjReadOnly.vpp"
+        to = "$dstDir/Obj@{name}PairReadOnly.java"
+        contexts = [types.byte, types.char, types.short, types.int, types.long, types.float, types.double, types.boolean, types.Decimal, types.DecimalLong]
+    }
+
+    primitivepairsecondobjreadonly {
+        from = "$srcDir/PrimitivePairSecondObjReadOnly.vpp"
+        to = "$dstDir/@{name}ObjPairReadOnly.java"
+        contexts = [types.byte, types.char, types.short, types.int, types.long, types.float, types.double, types.boolean, types.Decimal, types.DecimalLong]
+    }
+
+
+    primitivehashmapfirstobj {
+        from = "$srcDir/PrimitiveHashMapsFirstObj.vpp"
+        to = "$dstDir/ObjTo@{name}HashMap.java"
+        contexts = [types.byte, types.char, types.short, types.int, types.long, types.float, types.double, types.boolean, types.Decimal, types.DecimalLong]
+    }
+
+    primitivehashmapsecondobj {
+        from = "$srcDir/PrimitiveHashMapsSecondObj.vpp"
+        to = "$dstDir/@{name}ToObjHashMap.java"
+        contexts = [types.int, types.long, types.float, types.double, types.Decimal, types.DecimalLong, types.CharSequence]
+    }
+
+    primitivehashsets {
+        from = "$srcDir/PrimitiveHashSets.vpp"
+        to = "$dstDir/@{name}HashSet.java"
+        contexts = [types.int, types.long, types.float, types.double, types.Decimal, types.DecimalLong]
+    }
+
+    primitivearraylists {
+        from = "$srcDir/PrimitiveArrayLists.vpp"
+        to = "$dstDir/@{name}ArrayList.java"
+        contexts = [types.byte, types.char, types.short, types.int, types.long, types.double, types.boolean, types.Decimal, types.DecimalLong]
+    }
+
+    primitivedataqueues {
+        from = "$srcDir/PrimitiveDataQueues.vpp"
+        to = "$dstDir/@{name}DataQueue.java"
+        contexts = [types.Decimal, types.DecimalLong]
+    }
+}
+
+Map<String, Object> mapMerge(Map first, Map second) {
+    def newMap = [:]
+    for (Map.Entry<String, Object> e in first.entrySet())
+        newMap.put("first_" + e.key, e.value)
+    for (Map.Entry<String, Object> e in second.entrySet())
+        newMap.put("second_" + e.key, e.value)
+    return newMap
+}
+
+
+task vppPrimitivePairFirstObj(type: com.epam.deltix.gradle.plugins.velocity.VelocityTask) {
+}
+
+task vppPrimitivePair(type: com.epam.deltix.gradle.plugins.velocity.VelocityTask) {
+    from = "$srcDir/PrimitivePair.vpp"
+    to = "$dstDir/@{first_name}@{second_name}Pair.java"
+
+    List<Map> srcMaps = [types.byte, types.char, types.short, types.int, types.long, types.float, types.double, types.boolean, types.Decimal, types.DecimalLong]
+    List<Map> newMaps = []
+
+    for (Map first in srcMaps) {
+        for (Map second in srcMaps)
+            newMaps.add mapMerge(first, second)
+    }
+    setContexts newMaps
+}
+
+task vppPrimitivePairReadOnly(type: com.epam.deltix.gradle.plugins.velocity.VelocityTask) {
+    from = "$srcDir/PrimitivePairReadOnly.vpp"
+    to = "$dstDir/@{first_name}@{second_name}PairReadOnly.java"
+
+    List<Map> srcMaps = [types.byte, types.char, types.short, types.int, types.long, types.float, types.double, types.boolean, types.Decimal, types.DecimalLong]
+    List<Map> newMaps = []
+
+    for (Map first in srcMaps) {
+        for (Map second in srcMaps)
+            newMaps.add mapMerge(first, second)
+    }
+    setContexts newMaps
+}
+
+task vppHashMapDictionary(type: com.epam.deltix.gradle.plugins.velocity.VelocityTask) {
+    from = "$srcDir/PrimitiveHashMaps.vpp"
+    to = "$dstDir/@{first_name}To@{second_name}HashMap.java"
+
+    List<Map> srcMaps1 = [types.int, types.long, types.float, types.double, types.Decimal, types.DecimalLong, types.CharSequence]
+    List<Map> srcMaps = [types.byte, types.char, types.short, types.int, types.long, types.float, types.double, types.boolean, types.Decimal, types.DecimalLong]
+    List<Map> newMaps = []
+    for (Map first in srcMaps1) {
+        for (Map second in srcMaps)
+            newMaps.add mapMerge(first, second)
+    }
+    setContexts newMaps
+}
+
+
+
+Map<String, Object> mapMerge3(Map first, Map second, Map third) {
+    def newMap = [:]
+    for (Map.Entry<String, Object> e in first.entrySet())
+        newMap.put("first_" + e.key, e.value)
+    for (Map.Entry<String, Object> e in second.entrySet())
+        newMap.put("second_" + e.key, e.value)
+    for (Map.Entry<String, Object> e in third.entrySet())
+        newMap.put("third_" + e.key, e.value)
+    return newMap
+}
+
+task vppHashMapConsumer3(type: com.epam.deltix.gradle.plugins.velocity.VelocityTask) {
+    from = "$srcDir/PrimitiveConsumer3.vpp"
+    to = "$dstDir/@{first_name}@{second_name}@{third_name}Consumer.java"
+
+    List<Map> srcMaps = [types.byte, types.char, types.short, types.int, types.long, types.double, types.Object, types.boolean]
+    List<Map> newMaps = []
+    for (Map first in srcMaps) {
+        for (Map second in srcMaps)
+            for (Map third in srcMaps)
+                newMaps.add mapMerge3(first, second, third)
+    }
+    setContexts newMaps
+}
+task vppHashMapFunction3(type: com.epam.deltix.gradle.plugins.velocity.VelocityTask) {
+    from = "$srcDir/PrimitiveFunction3.vpp"
+    to = "$dstDir/@{first_name}@{second_name}To@{third_name}Function.java"
+
+    List<Map> srcMaps = [types.byte, types.char, types.short, types.int, types.long, types.double, types.Object, types.boolean]
+    List<Map> newMaps = []
+    for (Map first in srcMaps) {
+        for (Map second in srcMaps)
+            for (Map third in srcMaps)
+                newMaps.add mapMerge3(first, second, third)
+    }
+    setContexts newMaps
+}
+
+task vppHashMapConsumer2(type: com.epam.deltix.gradle.plugins.velocity.VelocityTask) {
+    from = "$srcDir/PrimitiveConsumer2.vpp"
+    to = "$dstDir/@{first_name}@{second_name}Consumer.java"
+
+    List<Map> srcMaps = [types.byte, types.char, types.short, types.int, types.long, types.double, types.Object, types.boolean]
+    List<Map> newMaps = []
+    for (Map first in srcMaps) {
+        for (Map second in srcMaps)
+            newMaps.add mapMerge(first, second)
+    }
+    setContexts newMaps
+}
+task vppHashMapFunction2(type: com.epam.deltix.gradle.plugins.velocity.VelocityTask) {
+    from = "$srcDir/PrimitiveFunction2.vpp"
+    to = "$dstDir/@{first_name}To@{second_name}Function.java"
+
+    List<Map> srcMaps = [types.byte, types.char, types.short, types.int, types.long, types.double, types.Object, types.boolean]
+    List<Map> newMaps = []
+    for (Map first in srcMaps) {
+        for (Map second in srcMaps)
+            newMaps.add mapMerge(first, second)
+    }
+    setContexts newMaps
+}
+
+project.tasks.getByName('compileJava').dependsOn(vppHashMapFunction2)
+project.tasks.getByName('compileJava').dependsOn(vppHashMapFunction3)
+project.tasks.getByName('compileJava').dependsOn(vppHashMapConsumer3)
+project.tasks.getByName('compileJava').dependsOn(vppHashMapConsumer2)
+project.tasks.getByName('compileJava').dependsOn(vppPrimitivePair)
+project.tasks.getByName('compileJava').dependsOn(vppPrimitivePairReadOnly)
+project.tasks.getByName('compileJava').dependsOn(vppHashMapDictionary)
+
+test {
+    minHeapSize = "512m"
+    maxHeapSize = "4g"
+}
+
+publishing {
+    repositories {
+        maven {
+            url "https://packages.deltixhub.com/maven2/${findProperty('FEED_BASE_NAME') ?: 'Test'}.Java"
+            credentials {
+                username findProperty('PUBLISHER_USERNAME') ?: ''
+                password findProperty('PUBLISHER_PASSWORD') ?: ''
+            }
+        }
+    }
+
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifact javadocJar
+            artifact sourcesJar
+            pom.withXml {
+                def topNode = asNode()
+                topNode.appendNode('description', 'Deltix collections and algorithms https://gitlab.deltixhub.com/Deltix/Containers/')
+            }
+        }
+    }
+}
+

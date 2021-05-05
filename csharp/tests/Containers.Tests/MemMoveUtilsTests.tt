@@ -1,0 +1,316 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using EPAM.Deltix.Containers;
+using NUnit.Framework;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.InteropServices;
+<#@ output extension=".cs" #>
+<#
+String[] types = new String[] { "void*", "byte*", "short*", "long*", "ushort*", "ulong*", "uint*", "char*", "double*", "float*", "bool*", "decimal*", "IntPtr"};
+#>
+
+namespace EPAM.Deltix.Containers.Tests{
+	public enum MoveType
+	{
+		LeftIntersection, 
+		RightIntersection,
+		NoIntersection,
+		CompleteIntersection
+	}
+	internal struct TestStruct
+	{
+		public int a;
+		public TestStruct(int _a) 
+		{
+			a = _a;
+		}
+	} 
+	class MemoryUtilsTests
+	{
+		byte[] ar;
+		int TestStructSize = Marshal.SizeOf(typeof(TestStruct));
+
+		void FillArray()
+		{
+			Array.Resize(ref ar, 100);
+			for (int i = 0; i < 10; ++i) ar[i] = (byte)i;
+			for (int i = 10; i < 100; ++i) ar[i] = 0;
+		
+		}
+		[TestCase(MoveType.NoIntersection)]
+		public unsafe void MemoryCopyTest(MoveType type)
+		{
+			<#
+			foreach (String type in types)
+			{
+			#>
+			FillArray();
+			if (type == MoveType.NoIntersection)
+			{
+				unsafe
+				{
+					fixed (byte* ptr = ar)
+					{
+						MemoryUtils.Copy((<#=type#>)ptr, (<#=type#>)(ptr + 20), 10);
+						for (int i = 0; i < 10; ++i) Assert.AreEqual(ar[i], i);
+						for (int i = 10; i < 20; ++i) Assert.AreEqual(ar[i], 0);
+						for (int i = 20; i < 30; ++i) Assert.AreEqual(ar[i], i - 20);
+						for (int i = 30; i < 100; ++i) Assert.AreEqual(ar[i], 0);
+					}
+				}
+			}
+			<#
+			}
+			#>
+		}
+		[TestCase(MoveType.NoIntersection)]
+		[TestCase(MoveType.LeftIntersection)]
+		public unsafe void MoveLeftTest(MoveType type)
+		{
+			<#
+			foreach (String type in types)
+			{
+			#>
+		
+			FillArray();
+			if (type == MoveType.NoIntersection)
+			{
+				unsafe
+				{
+					fixed (byte* ptr = ar)
+					{
+						MemoryUtils.MoveLeft((<#=type#>)ptr, (<#=type#>)(ptr + 20), 10);
+						for (int i = 0; i < 10; ++i) Assert.AreEqual(ar[i], i);
+						for (int i = 10; i < 20; ++i) Assert.AreEqual(ar[i], 0);
+						for (int i = 20; i < 30; ++i) Assert.AreEqual(ar[i], i - 20);
+						for (int i = 30; i < 100; ++i) Assert.AreEqual(ar[i], 0);
+					}
+				}
+			}
+			if (type == MoveType.LeftIntersection)
+			{
+				unsafe
+				{
+					fixed (byte* ptr = ar)
+					{
+						MemoryUtils.Copy((<#=type#>)ptr, (<#=type#>)(ptr + 20), 10);
+						MemoryUtils.MoveLeft((<#=type#>)(ptr + 20), (<#=type#>)(ptr + 15), 10);
+						for (int i = 0; i < 10; ++i) Assert.AreEqual(ar[i], i);
+						for (int i = 10; i < 15; ++i) Assert.AreEqual(ar[i], 0);
+						for (int i = 15; i < 25; ++i) Assert.AreEqual(ar[i], i - 15);
+						for (int i = 25; i < 30; ++i) Assert.AreEqual(ar[i], i - 20);
+						for (int i = 30; i < 100; ++i) Assert.AreEqual(ar[i], 0);
+					}
+				}
+			}
+			<#}#>
+		}
+		[TestCase(MoveType.NoIntersection)]
+		[TestCase(MoveType.RightIntersection)]
+		public unsafe void MoveRightTest(MoveType type) 
+		{
+			<#
+			foreach (String type in types)
+			{
+			#>
+			FillArray();
+			if (type == MoveType.NoIntersection)
+			{
+				unsafe
+				{
+					fixed (byte* ptr = ar)
+					{
+						MemoryUtils.MoveRight((<#=type#>)ptr, (<#=type#>)(ptr + 20),  10);
+						for (int i = 0; i < 10; ++i) Assert.AreEqual(ar[i], i);
+						for (int i = 10; i < 20; ++i) Assert.AreEqual(ar[i], 0);
+						for (int i = 20; i < 30; ++i) Assert.AreEqual(ar[i], i - 20);
+						for (int i = 30; i < 100; ++i) Assert.AreEqual(ar[i], 0);
+					}
+				}
+			}
+			if (type == MoveType.RightIntersection)
+			{
+				unsafe
+				{
+					fixed (byte* ptr = ar)
+					{
+						MemoryUtils.MoveRight((<#=type#>)ptr, (<#=type#>)(ptr + 5),  10);
+						for (int i = 0; i < 5; ++i) Assert.AreEqual(ar[i], i);
+						for (int i = 5; i < 15; ++i) Assert.AreEqual(ar[i], i - 5);
+						for (int i = 15; i < 100; ++i) Assert.AreEqual(ar[i], 0);
+					}
+				}
+			}
+			<#}#>
+		}
+
+		[TestCase(MoveType.CompleteIntersection)]
+		[TestCase(MoveType.LeftIntersection)]
+		[TestCase(MoveType.NoIntersection)]
+		[TestCase(MoveType.RightIntersection)]
+		public unsafe void MoveTest(MoveType type) 
+		{
+			<#
+			foreach (String type in types)
+			{
+			#>
+			
+			FillArray();
+			if (type == MoveType.RightIntersection)
+			{
+				unsafe
+				{
+					fixed (byte* ptr = ar)
+					{
+						MemoryUtils.Move((<#=type#>)ptr, (<#=type#>)(ptr + 5), 10);
+						for (int i = 0; i < 5; ++i) Assert.AreEqual(ar[i], i);
+						for (int i = 5; i < 15; ++i) Assert.AreEqual(ar[i], i - 5);
+						for (int i = 15; i < 100; ++i) Assert.AreEqual(ar[i], 0);
+					}
+				}
+			}
+
+			if (type == MoveType.NoIntersection)
+			{
+				unsafe
+				{
+					fixed (byte* ptr = ar)
+					{
+						MemoryUtils.Move((<#=type#>)ptr, (<#=type#>)(ptr + 20), 10);
+						for (int i = 0; i < 10; ++i) Assert.AreEqual(ar[i], i);
+						for (int i = 10; i < 20; ++i) Assert.AreEqual(ar[i], 0);
+						for (int i = 20; i < 30; ++i) Assert.AreEqual(ar[i], i - 20);
+						for (int i = 30; i < 100; ++i) Assert.AreEqual(ar[i], 0);
+					}
+				}
+			}
+			if (type == MoveType.LeftIntersection)
+			{
+				unsafe
+				{
+					fixed (byte* ptr = ar)
+					{
+						MemoryUtils.Move((<#=type#>)ptr, (<#=type#>)(ptr + 20),  10);
+						MemoryUtils.Move((<#=type#>)(ptr + 20), (<#=type#>)(ptr + 15), 10);
+						for (int i = 0; i < 10; ++i) Assert.AreEqual(ar[i], i);
+						for (int i = 10; i < 15; ++i) Assert.AreEqual(ar[i], 0);
+						for (int i = 15; i < 25; ++i) Assert.AreEqual(ar[i], i - 15);
+						for (int i = 25; i < 30; ++i) Assert.AreEqual(ar[i], i - 20);
+						for (int i = 30; i < 100; ++i) Assert.AreEqual(ar[i], 0);
+					}
+				}
+			}
+			if (type == MoveType.CompleteIntersection)
+			{
+				unsafe
+				{
+					fixed (byte* ptr = ar)
+					{
+						MemoryUtils.Move((<#=type#>)ptr, (<#=type#>)ptr, 10);
+						for (int i = 0; i < 10; ++i) Assert.AreEqual(ar[i], i);
+						for (int i = 10; i < 100; ++i) Assert.AreEqual(ar[i], 0);
+					}
+				}
+			}
+			<#}#>
+		}
+
+		private static unsafe IntPtr GetPointer<Struct>(Struct[] input) where Struct : struct
+		{
+			Type[] methodArgs = { typeof(Struct[]) };
+			DynamicMethod getPointer = new DynamicMethod("GetPointer1", typeof(IntPtr), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+			ILGenerator generator = getPointer.GetILGenerator();
+			generator.Emit(OpCodes.Ldarg_0);
+			generator.Emit(OpCodes.Ldc_I4_0);
+			generator.Emit(OpCodes.Ldelema, typeof(Struct));
+			generator.Emit(OpCodes.Conv_I);
+			generator.Emit(OpCodes.Ret);
+			object[] args = { input };
+			Func<Struct[], IntPtr> myDelegate = (Func<Struct[], IntPtr>)getPointer.CreateDelegate(typeof(Func<Struct[], IntPtr>));
+			return myDelegate(input);
+		}
+
+		[TestCase()]
+		public unsafe void TestClassForWorkWithStruct() 
+		{
+			MemoryUtilsForStruct<TestStruct> memoryClass = new MemoryUtilsForStruct<TestStruct>();
+			TestStruct[] a = {new TestStruct(1), new TestStruct(3)};
+			TestStruct[] b = {new TestStruct(11), new TestStruct(13)};
+			memoryClass.Move(b, 0, a, 0,  TestStructSize * 2);
+			Assert.AreEqual(a[0].a, 11);
+			Assert.AreEqual(a[1].a, 13);
+		}
+
+		[TestCase()]
+		public unsafe void TestClassForWorkWithStructAndPtr() 
+		{
+			MemoryUtilsForStruct<TestStruct> memoryClass = new MemoryUtilsForStruct<TestStruct>();
+			TestStruct[] a = {new TestStruct(1), new TestStruct(3)};
+			TestStruct[] b = {new TestStruct(11), new TestStruct(13)};
+			TestStruct[] c = {new TestStruct(1), new TestStruct(3)};
+			memoryClass.Move(b, 0, a, 0, TestStructSize * 2);
+			Assert.AreEqual(a[0].a, 11);
+			Assert.AreEqual(a[1].a, 13);
+			memoryClass.Move(c, 0, a, 0,  TestStructSize * 2);
+			Assert.AreEqual(a[0].a, 1);
+			Assert.AreEqual(a[1].a, 3);
+			fixed (void* nativePtr1 = a)
+			{
+				fixed (void* nativePtr2 = b)
+				{
+					IntPtr ptr1 = (IntPtr)nativePtr1;
+					IntPtr ptr2 = (IntPtr)nativePtr2;
+
+					<#
+					foreach (String type in types)
+					{
+					#>
+					memoryClass.Move( b, 0, (<#=type#>)ptr1, TestStructSize * 2);
+					Assert.AreEqual(a[0].a, 11);
+					Assert.AreEqual(a[1].a, 13);
+					memoryClass.Move( c, 0, (<#=type#>)ptr1, TestStructSize * 2);
+					Assert.AreEqual(a[0].a, 1);
+					Assert.AreEqual(a[1].a, 3);
+					memoryClass.Move(b, 0, (<#=type#>)ptr1, TestStructSize * 2);
+					Assert.AreEqual(a[0].a, 11);
+					Assert.AreEqual(a[1].a, 13);
+					memoryClass.Move(c, 0, (<#=type#>)ptr1,  TestStructSize * 2);
+					Assert.AreEqual(a[0].a, 1);
+					Assert.AreEqual(a[1].a, 3);
+			
+					memoryClass.Move((<#=type#>)ptr2,a, 0,  TestStructSize * 2);
+					Assert.AreEqual(a[0].a, 11);
+					Assert.AreEqual(a[1].a, 13);
+					memoryClass.Move(c, 0, a, 0,  TestStructSize * 2);
+					Assert.AreEqual(a[0].a, 1);
+					Assert.AreEqual(a[1].a, 3);
+					memoryClass.Move((<#=type#>)ptr2, a, 0,  TestStructSize * 2);
+					Assert.AreEqual(a[0].a, 11);
+					Assert.AreEqual(a[1].a, 13);
+					memoryClass.Move(c, 0, a, 0,  TestStructSize * 2);
+					Assert.AreEqual(a[0].a, 1);
+					Assert.AreEqual(a[1].a, 3);
+					<#
+					}
+					#>
+				}
+			}
+			
+		}
+
+			
+
+		
+
+
+
+		
+
+
+		
+
+	}
+}

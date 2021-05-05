@@ -1,0 +1,60 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
+    <Authors>Deltix Inc.</Authors>
+    <Company>Deltix Inc.</Company>
+    <Description>Common containers and data structures for .NET.</Description>
+    <Copyright>Copyright (C) 2016-2017, Deltix Inc.</Copyright>
+    <PackageProjectUrl>https://gitlab.deltixhub.com/Deltix/Containers</PackageProjectUrl>
+    <RepositoryUrl>git@gitlab.deltixhub.com:Deltix/Containers.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>.NET Containers</PackageTags>
+    <AssemblyVersion>0.0.0.0</AssemblyVersion>
+    <FileVersion>0.0.0.0</FileVersion>
+    <Version>0.0.0</Version>
+    <NoWarn>108</NoWarn>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.0|AnyCPU'">
+    <DocumentationFile>bin\Release\netstandard2.0\Deltix.Containers.xml</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net45|AnyCPU'">
+    <DocumentationFile>bin\Release\net45\Deltix.Containers.xml</DocumentationFile>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Runtime" Version="4.3.0" />
+    <PackageReference Include="System.IO" Version="4.3.0" />    
+    <PackageReference Include="System.Reflection.Emit" Version="4.3.0" />
+    <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="4.3.0" />
+    <PackageReference Include="System.Reflection.Primitives" Version="4.3.0" />
+    <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Deltix.Time" Version="0.2.0" />
+    <PackageReference Include="System.Memory" Version="4.5.2" />
+    <PackageReference Include="Deltix.DFP" Version="0.10.7" />
+
+  </ItemGroup>
+  <ItemGroup>
+    <T4Transformer Include="*.tt" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Deltix.MSBuild.T4Transformer" Version="1.0.0" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Tuple.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Tuple.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+</Project>

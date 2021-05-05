@@ -1,0 +1,189 @@
+package com.epam.deltix.containers.generated;
+#if (${first_name} == "Decimal" || ${second_name} == "Decimal")
+import com.epam.deltix.dfp.Decimal64;
+#end
+#if (${first_name} == "DecimalLong" || ${second_name} == "DecimalLong")
+import com.epam.deltix.dfp.Decimal64Utils;
+#end
+
+
+
+/**
+ * Public class for store pair of item's. First item is ${first_type}, second is ${second_type}.
+ */
+
+
+
+public class ${first_name}${second_name}Pair implements ${first_name}${second_name}PairReadOnly {
+
+    private int firstHashFunction(${first_type} value) {
+    	#if (${first_name} == "Obj")
+    	if (value == null) return 0; else return value.hashCode();
+    	#elseif (${first_name} == "Int") 
+    	return Math.abs(value);
+    	#elseif (${first_name} == "Short") 
+    	return Math.abs((int)value);
+    	#elseif (${first_name} == "Char") 
+    	return Math.abs((int)value);
+    	#elseif (${first_name} == "Byte") 
+    	return Math.abs((int)value);
+    	#elseif (${first_name} == "Long")
+    	return Math.abs((int)value);
+    	#elseif (${first_name} == "Float")
+    	return Math.abs(Float.floatToRawIntBits(value));
+    	#elseif (${first_name} == "Double") 
+    	return Math.abs((int)Double.doubleToRawLongBits(value));
+    	#elseif (${first_name} == "Decimal") 
+    	return Math.abs((int)value.hashCode());    	
+    	#elseif (${first_name} == "DecimalLong") 
+    	return Math.abs((int)Decimal64Utils.hashCode(value));
+    	#else 
+    	return 0;
+    	#end
+    }
+
+    private int secondHashFunction(${second_type} value) {
+    	#if (${second_name} == "Obj")
+    	if (value == null) return 0; else return value.hashCode();
+    	#elseif (${second_name} == "Int") 
+    	return Math.abs(value);
+    	#elseif (${second_name} == "Short") 
+    	return Math.abs((int)value);
+    	#elseif (${second_name} == "Char") 
+    	return Math.abs((int)value);
+    	#elseif (${second_name} == "Byte") 
+    	return Math.abs((int)value);
+    	#elseif (${second_name} == "Long")
+    	return Math.abs((int)value);
+    	#elseif (${second_name} == "Float")
+    	return Math.abs(Float.floatToRawIntBits(value));
+    	#elseif (${second_name} == "Double") 
+    	return Math.abs((int)Double.doubleToRawLongBits(value));
+    	#elseif (${second_name} == "Decimal") 
+    	return Math.abs((int)value.hashCode());
+    	#elseif (${second_name} == "DecimalLong") 
+    	return Math.abs((int)Decimal64Utils.hashCode(value));
+    	#else 
+    	return 0;
+    	#end
+     }
+
+
+    
+    
+    
+    /**
+     * Get second item of this pair.
+     * @return Second item of this pair.
+     */
+    @Override
+    public ${second_type} getSecond() {
+        return second;
+    }
+
+    /**
+     * Set second item of this pair to new value.
+     * @param second New value of second item.
+     */
+    public void setSecond(${second_type} second) {
+        this.second = second;
+    }
+
+    /**
+     * Get first item of this pair.
+     * @return First item of this pair.
+     */
+    @Override
+    public ${first_type} getFirst() {
+        return first;
+    }
+
+    /**
+     * Set first item of this pair to new value.
+     * @param first New value of first item.
+     */
+    public void setFirst(${first_type} first) {
+        this.first = first;
+    }
+
+    ${first_type} first;
+    ${second_type} second;
+
+
+    /**
+     * Init this pair by data.
+     * @param first New value of first item.
+     * @param second New value of second item.
+     */
+    public void init(${first_type} first, ${second_type} second) {
+        this.first = first;
+        this.second = second;
+    }
+
+    /**
+     * Create new instance of pair.
+     * @param first New value of first item.
+     * @param second New value of second item.
+     */
+    public ${first_name}${second_name}Pair(${first_type} first, ${second_type} second) {
+        this.first = first;
+        this.second = second;
+    }
+
+    /**
+     * Create new instance of pair without initialization.
+     */
+    public ${first_name}${second_name}Pair() {
+
+    }
+
+    @Override
+    public int hashCode() {
+    	return firstHashFunction(first) ^ (secondHashFunction(second) * 31);
+    }
+
+    @Override
+    public void copyTo(${first_name}${second_name}Pair destination) {
+    	destination.init(first, second);
+    }
+    
+    @Override
+    public ${first_name}${second_name}Pair clone() {
+        ${first_name}${second_name}Pair destination = new ${first_name}${second_name}Pair();
+        copyTo(destination);
+        return destination;
+    }
+
+
+    @Override
+    public String toString() {
+    	StringBuilder str = new StringBuilder();
+    	str.append("(").append(${first_type_Object}.toString(first)).append(", ").append(${second_type_Object}.toString(second)).append(')');
+    	return str.toString();
+    }
+
+    @Override
+    public boolean equals(Object other) {
+    	if (other instanceof ${first_name}${second_name}PairReadOnly) {
+    	    ${first_name}${second_name}PairReadOnly pair = (${first_name}${second_name}PairReadOnly)other;
+    	    #if (${first_name} == "DecimalLong")
+    	    boolean firstEquals = (Decimal64Utils.equals(first, pair.getFirst()));
+    	    #elseif (${first_name} == "Decimal") 
+    	    boolean firstEquals = (first.equals(pair.getFirst()));
+    	    #else 
+    	    boolean firstEquals = (first == pair.getFirst());
+    	    #end
+
+    	    #if (${second_name} == "DecimalLong")
+    	    boolean secondEquals = (Decimal64Utils.equals(second, pair.getSecond()));
+    	    #elseif (${second_name} == "Decimal") 
+    	    boolean secondEquals = (second.equals(pair.getSecond()));
+    	    #else 
+    	    boolean secondEquals = (second == pair.getSecond());
+    	    #end
+
+            return firstEquals && secondEquals;
+    	} 
+    	return false;
+    }
+}

@@ -1,0 +1,376 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+<#
+String[] types = new String[] { "void*", "byte*", "short*", "long*", "ushort*", "ulong*", "uint*", "char*", "double*", "float*", "bool*", "decimal*", "IntPtr"};
+String[] types1 = new String[] {"Byte", "Char", "Int32", "Int64", "Int16", "UInt16", "UInt32", "UInt64", "Double", "Single", "bool", "Decimal"};
+
+#>
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.InteropServices;
+
+
+
+namespace EPAM.Deltix.Containers{
+	/// <summary>
+	/// Utils for works with memory
+	/// </summary>
+    public class MemoryUtils
+    {
+		<#
+		foreach (String type in types)
+		{
+		foreach (String type1 in types) {
+		#>
+		/// <summary>
+		/// Move block of memory to another with no intersection
+		/// </summary>
+		/// <param name="source">The memory pointer to copy from.</param>
+		/// <param name="destination">The memory pointer to copy to.</param>
+		/// <param name="size">The size in bytes to copy.</param>
+		public unsafe static void Copy(<#=type#> source, <#=type1#> destination, int size)
+		{
+			int block;
+			block = size >> 3;
+			long* pDest = (long*)destination;
+			long* pSrc = (long*)source;
+			for (int i = 0; i < block; i++)
+			{
+				*pDest = *pSrc; pDest++; pSrc++;
+			}
+			void* _destination = pDest;
+			void* _source = pSrc;
+			int count = size - (block << 3);
+			if (count > 0)
+			{
+				byte* pDestB = (byte*)_destination;
+				byte* pSrcB = (byte*)_source;
+				for (int i = 0; i < count; i++)
+				{
+					*pDestB = *pSrcB; pDestB++; pSrcB++;
+				}
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another from left.
+		/// </summary>
+		/// <param name="source">The memory pointer to copy from.</param>
+		/// <param name="destination">The memory pointer to copy to.</param>
+		/// <param name="size">The size in bytes to copy.</param>
+		public unsafe static void MoveLeft(<#=type#> source, <#=type1#> destination, int size)
+		{
+			Copy(source, destination, size);
+		}
+		/// <summary>
+		/// Move block of memory to another from right.
+		/// </summary>
+		/// <param name="source">The memory pointer to copy from.</param>
+		/// <param name="destination">The memory pointer to copy to.</param>
+		/// <param name="size">The size in bytes to copy.</param>
+		public unsafe static void MoveRight(<#=type#> source, <#=type1#> destination, int size)
+		{
+			int block;
+			block = size >> 3;
+			long* pDest = (long*)(((byte*)destination) + size - 8);
+			long* pSrc = (long*)(((byte*)source) + size - 8);
+			for (int i = 0; i < block; i++)
+			{
+				*pDest = *pSrc; pDest--; pSrc--;
+			}
+			int count = size - (block << 3);
+			void* _destination = pDest;
+			void* _source = pSrc;
+			if (count > 0)
+			{
+				byte* pDestB = (byte*) _destination;
+				byte* pSrcB = (byte*) _source;
+				pDestB += 7;
+				pSrcB += 7;
+				for (int i = 0; i < count; i++)
+				{
+					*pDestB = *pSrcB; pDestB--; pSrcB--;
+				}
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another.
+		/// </summary>
+		/// <param name="source">The memory pointer to copy from.</param>
+		/// <param name="destination">The memory pointer to copy to.</param>
+		/// <param name="size">The size in bytes to copy.</param>
+		public unsafe static void Move(<#=type#> source, <#=type1#> destination, int size)
+		{
+			if ((void*)source > (void*)destination) MoveLeft(source, destination, size);
+			else MoveRight(source, destination, size);
+		}
+		<#
+		}
+		}
+		#>
+		<#
+		foreach (String type in types)
+		{
+			foreach (String type1 in types1) {
+		#>
+		/// <summary>
+		/// Move block of memory to another with no intersection
+		/// </summary>
+		/// <param name="source">The memory pointer to copy from.</param>
+		/// <param name="destination">The array to copy to.</param>
+		/// <param name="startDestinationOffset">The offset in bytes in the destination array where copying should start.</param>
+		/// <param name="size">The size in bytes to copy.</param>   
+		public unsafe static void Copy(<#=type#> source, <#=type1#>[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			unsafe 
+			{
+				fixed (void* ptr = destination) {
+					<#=type#> ptr1 = (<#=type#>)(((byte*)(ptr)) + startDestinationOffset);
+					Copy(source, ptr1, size);
+				}
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another from left.
+		/// </summary>
+		/// <param name="source">The memory pointer to copy from.</param>
+		/// <param name="destination">The array to copy to.</param>
+		/// <param name="startDestinationOffset">The offset in bytes in the destination array where copying should start.</param>
+		/// <param name="size">The size in bytes to copy.</param>   
+		public unsafe static void MoveLeft(<#=type#> source, <#=type1#>[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			unsafe 
+			{
+				fixed (void* ptr = destination) {
+					<#=type#> ptr1 = (<#=type#>)(((byte*)(ptr)) + startDestinationOffset);
+					MoveLeft(source, ptr1, size);
+				}
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another from right.
+		/// </summary>
+		/// <param name="source">The memory pointer to copy from.</param>
+		/// <param name="destination">The array to copy to.</param>
+		/// <param name="startDestinationOffset">The offset in bytes in the destination array where copying should start.</param>
+		/// <param name="size">The size in bytes to copy.</param>   
+		public unsafe static void MoveRight(<#=type#> source, <#=type1#>[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			unsafe 
+			{
+				fixed (void* ptr = destination) {
+					<#=type#> ptr1 = (<#=type#>)(((byte*)(ptr)) + startDestinationOffset);
+					MoveRight(source, ptr1, size);
+				}
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another.
+		/// </summary>
+		/// <param name="source">The memory pointer to copy from.</param>
+		/// <param name="destination">The array to copy to.</param>
+		/// <param name="startDestinationOffset">The offset in bytes in the destination array where copying should start.</param>
+		/// <param name="size">The size in bytes to copy.</param>   
+		public unsafe static void Move(<#=type#> source, <#=type1#>[] destination, int startDestinationOffset, int size)
+		{
+			if (size == 0) return;
+			unsafe 
+			{
+				fixed (void* ptr = destination) {
+					<#=type#> ptr1 = (<#=type#>)(((byte*)(ptr)) + startDestinationOffset);
+					Move(source, ptr1, size);
+				}
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another with no intersection
+		/// </summary>
+		/// <param name="source">The one-dimensional array to copy from.</param>
+		/// <param name="startSourceOffset">The offset in bytes in the source array where copying should start.</param>
+		/// <param name="destination">The memory pointer to copy to.</param>
+		/// <param name="size">The size of array elements to copy in bytes.</param>
+		public unsafe static void Copy(<#=type1#>[] source, int startSourceOffset, <#=type#> destination, int size) 
+		{
+			if (size == 0) return;
+			unsafe 
+			{
+				fixed (void* ptr = source) {
+					<#=type#> ptr1 = (<#=type#>)(((byte*)(ptr)) + startSourceOffset);
+					Copy(ptr1, destination, size);
+				}
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another from left.
+		/// </summary>
+		/// <param name="source">The one-dimensional array to copy from.</param>
+		/// <param name="startSourceOffset">The offset in bytes in the source array where copying should start.</param>
+		/// <param name="destination">The memory pointer to copy to.</param>
+		/// <param name="size">The size of array elements to copy in bytes.</param>
+		public unsafe static void MoveLeft(<#=type1#>[] source, int startSourceOffset, <#=type#> destination,  int size) 
+		{
+			if (size == 0) return;
+			unsafe 
+			{
+				fixed (void* ptr = source) {
+					<#=type#> ptr1 = (<#=type#>)(((byte*)(ptr)) + startSourceOffset);
+					MoveLeft(ptr1, destination, size);
+				}
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another from right.
+		/// </summary>
+		/// <param name="source">The one-dimensional array to copy from.</param>
+		/// <param name="startSourceOffset">The offset in bytes in the source array where copying should start.</param>
+		/// <param name="destination">The memory pointer to copy to.</param>
+		/// <param name="size">The size of array elements to copy in bytes.</param>
+		public unsafe static void MoveRight(<#=type1#>[] source, int startSourceOffset, <#=type#> destination,  int size) 
+		{
+			if (size == 0) return;
+			unsafe 
+			{
+				fixed (void* ptr = source) {
+					<#=type#> ptr1 = (<#=type#>)(((byte*)(ptr)) + startSourceOffset);
+					MoveRight(ptr1, destination, size);
+				}
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another.
+		/// </summary>
+		/// <param name="source">The one-dimensional array to copy from.</param>
+		/// <param name="startSourceOffset">The offset in bytes in the source array where copying should start.</param>
+		/// <param name="destination">The memory pointer to copy to.</param>
+		/// <param name="size">The size of array elements to copy in bytes.</param>
+		public unsafe static void Move(<#=type1#>[] source, int startSourceOffset, <#=type#> destination, int size)
+		{
+			if (size == 0) return;
+			unsafe 
+			{
+				fixed (void* ptr = source) {
+					<#=type#> ptr1 = (<#=type#>)(((byte*)(ptr)) + startSourceOffset);
+					Move(ptr1, destination, size);
+				}
+			}
+		}
+		<#
+		} 
+		}
+		#>
+		<#
+		foreach (String type in types1)
+		{
+			foreach (String type1 in types1) {
+		#>
+		
+		/// <summary>
+		/// Move block of memory to another with no intersection
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinatinonArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe static void Copy(<#=type#>[] source, int startSourceOffset, <#=type1#>[] destination, int startDestinationOffset,  int size) 
+		{
+			if (size == 0) return;
+			unsafe 
+			{
+				fixed (void* ptr = destination) {
+					fixed (void* ptr0 = source) {
+						<#=type#>* ptr1 = (<#=type#>*)(((byte*)(ptr)) + startDestinationOffset);
+						<#=type#>* ptr2 = (<#=type#>*)(((byte*)(ptr0)) + startSourceOffset);
+						Copy(ptr2, ptr1, size);
+					
+					}
+				}
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another from left.
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinatinonArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe static void MoveLeft(<#=type#>[] source, int startSourceOffset, <#=type1#>[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			unsafe 
+			{
+				fixed (void* ptr = destination) {
+					fixed (void* ptr0 = source) {
+						<#=type#>* ptr1 = (<#=type#>*)(((byte*)(ptr)) + startDestinationOffset);
+						<#=type#>* ptr2 = (<#=type#>*)(((byte*)(ptr0)) + startSourceOffset);
+						MoveLeft(ptr2, ptr1, size);
+					
+					}
+				}
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another from right.
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinatinonArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe static void MoveRight(<#=type#>[] source, int startSourceOffset, <#=type1#>[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			unsafe 
+			{
+				fixed (void* ptr = destination) {
+					fixed (void* ptr0 = source) {
+						<#=type#>* ptr1 = (<#=type#>*)(((byte*)(ptr)) + startDestinationOffset);
+						<#=type#>* ptr2 = (<#=type#>*)(((byte*)(ptr0)) + startSourceOffset);
+						MoveRight(ptr2, ptr1, size);
+					
+					}
+				}
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another.
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinatinonArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe static void Move(<#=type#>[] source, int startSourceOffset, <#=type1#>[] destination, int startDestinationOffset, int size)
+		{
+			if (size == 0) return;
+			unsafe 
+			{
+				fixed (void* ptr = destination) {
+					fixed (void* ptr0 = source) {
+						<#=type#>* ptr1 = (<#=type#>*)(((byte*)(ptr)) + startDestinationOffset);
+						<#=type#>* ptr2 = (<#=type#>*)(((byte*)(ptr0)) + startSourceOffset);
+						Move(ptr2, ptr1, size);
+					
+					}
+				}
+			}
+		}
+
+		<#
+		} 
+		}
+		#>
+    }
+}

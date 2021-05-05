@@ -1,0 +1,330 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+<#
+string[] stringTypes = new String[] { "String", "MutableString", "IReadOnlyString" };
+string[] stringGetLength = new  String[] { "str.Length", "str._length", "str.Length"};
+string[] stringGetReadOnlyData = new String[] {"String data = str;", "Char[] data = str._data;", "IReadOnlyString data = str;"};
+
+string[] stringCharType = new String[] { "Char", "Char", "Char" }; // Used this for experiments
+string[] stringGetData = new String[] {
+	"Char* data = stackalloc Char[12]; // TODO: Does 0-fill, unfortunately. Even if optimized. Has some perf. cost",
+	"Char[] data = str._data; str._length = (Int32)len;",
+	"Char* data = stackalloc Char[12];"};
+
+string[] stringDefault = new String[] {"null", "str.Clear()", "null"};
+string[] stringReturn = new String[] {"new String((Char*)data, 0, (Int32)len)", "str", "new MutableString().Assign((Char*)data, (Int32)len)"};
+string[] stringInit = new String[] {"", "MutableString str = new MutableString(10)", "IReadOnlyString str = new MutableString(10)"};
+
+#>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace EPAM.Deltix.Containers{
+	/// <summary>
+	/// Contains various useful utils for conversions between Alphanumeric representations. 
+	/// </summary>
+	public static class AlphanumericUtils
+	{
+		//static Int32 Bsr(Int32 x)
+		//{
+		//	unsafe
+		//	{
+		//		Double d;
+		//		*(((Int32*)&d) + 1) = 0x43300000;
+		//		*(Int32*)&d = x;
+		//		d -= 4503599627370496.0;
+		//		Int32 r = *(((Int32*)&d) + 1);
+		//		return (r >> 20) - 0x3FE;
+		//	}
+		//}
+
+		private const UInt64 Alphanum10MaxLength = 10;
+		private const Int32 Alphanum10NumLengthBits = 4;
+
+		private const UInt64 UInt64NullValue = unchecked((UInt64)Int64.MinValue);
+
+<#
+for (Int32 i = 0; i < stringTypes.Length; ++i)
+{
+#>
+		/// <summary>
+		/// Checks that string could be effectively packed with ALPHANUMERIC(N) encoder.
+		/// Throws ArgumentException if string is too long or contains disallowed characters
+		/// </summary>
+		/// <param name="str">String to check.</param>
+		/// <returns>True if string could be packed with ALPHANUMERIC(N) encoder.</returns>
+		public static Boolean IsValidAlphanumeric(this <#=stringTypes[i]#> str)
+		{
+			<#if (stringTypes[i] == "IReadOnlyString") { #>
+				if (str is MutableString) return IsValidAlphanumeric((MutableString)str);
+			<#}#>
+
+			Int32 length;
+			if (str == null || (length = <#=stringGetLength[i]#>) == 0)
+				return true; 
+
+			if (length > 0xFFFE /* Max alphanumeric length that will supposedly go through all current codecs */)
+				return false;
+
+			const UInt32 space = (UInt32)' ';
+			<#=stringGetReadOnlyData[i]#>
+			
+			UInt32 acc = 0;
+			for (Int32 i = 0; i < length; ++i)
+			{
+				acc |= (UInt32)data[i] - space;
+			}
+
+			return acc < 0x40;	// None of the "encoded" characters should use more than 6 bits
+		}
+
+		/// <summary>
+		/// Checks that string could be effectively packed with ALPHANUMERIC(10) encoder.
+		/// </summary>
+		/// <param name="str">String to check.</param>
+		/// <returns>True if string could be packed with ALPHANUMERIC(10) encoder.</returns>
+		public static Boolean IsValidAlphanumericUInt64(this <#=stringTypes[i]#> str)
+		{
+			<#if (stringTypes[i] == "IReadOnlyString") { #>
+				if (str is MutableString) return IsValidAlphanumeric((MutableString)str);
+			<#}#>
+
+			Int32 length;
+			if (str == null || (length = <#=stringGetLength[i]#>) == 0)
+				return true;
+
+			if (length > 10)
+				return false;
+
+			UInt32 ch, check = 0;
+			const UInt32 space = (UInt32)' ';
+			<#=stringGetReadOnlyData[i]#>
+
+			switch (length)
+			{
+<# for (Int32 l = 10; l > 0; --l) { #>
+				case <#=l#>: ch = (UInt32)(UInt16)data[<#=l#> - 1] - space; check |= ch; goto case <#=l - 1#>;
+<#}#>
+				case 0:
+					break;
+
+				default:
+					return false;
+			}
+
+			return check < 0x40;
+		}
+
+<#
+}
+#>
+
+		/// <summary>
+		/// Checks that long integer number contains valid string packed by ALPHANUMERIC(10) codec.
+		/// </summary>
+		/// <param name="alphanumericLong">Integer to check.</param>
+		/// <returns>True if long integer number contains valid string packed by ALPHANUMERIC(10) codec, including null value.</returns>
+		public static Boolean IsValidAlphanumeric(Int64 alphanumericLong)
+		{
+			return IsValidAlphanumeric((UInt64)alphanumericLong);
+		}
+
+		/// <summary>
+		/// Checks that long integer number contains valid string packed by ALPHANUMERIC(10) codec.
+		/// </summary>
+		/// <param name="alphanumericLong">Integer to check.</param>
+		/// <returns>True if long integer number contains valid string packed by ALPHANUMERIC(10) codec, including null value.</returns>
+		public static Boolean IsValidAlphanumeric(UInt64 alphanumericLong)
+		{
+			if (alphanumericLong == UInt64NullValue)
+				return true;
+
+			// number of bits to store |[0..size]| = size + 1 values
+			// bsr(MaxSize + 1) = bsr(10 + 1) = 4  
+			
+			UInt64 len = alphanumericLong >> (sizeof(Int64) * 8 - Alphanum10NumLengthBits);
+			return len <= Alphanum10MaxLength + 1; // valid lengths are: 0..n, n + 1
+		}
+
+
+		/// <summary>
+		/// Decodes ALPHANUMERIC(10) and assigns it to MutableString (can't be null).
+		/// Throws ArgumentException if alphanumericLong parameter can't be decoded
+		/// </summary>
+		/// <param name="str">MutableString to assign the result.</param>
+		/// <param name="alphanumericLong">Long Integer to decode.</param>
+		/// <returns>Returns the same instance of MutableString that was passed as parameter.</returns>
+		public static MutableString AssignAlphanumeric(this MutableString str, Int64 alphanumericLong)
+		{
+			return AssignAlphanumeric(str, (UInt64)alphanumericLong);
+		}
+
+
+		/// <summary>
+		/// Decodes ALPHANUMERIC(10) and assigns it to MutableString (can't be null).
+		/// Throws ArgumentException if alphanumericLong parameter can't be decoded
+		/// </summary>
+		/// <param name="str">MutableString to assign the result.</param>
+		/// <param name="alphanumericLong">Long Integer to decode.</param>
+		/// <returns>Returns the same instance of MutableString that was passed as parameter.</returns>
+		public static MutableString AssignAlphanumeric(this MutableString str, UInt64 alphanumericLong)
+		{
+			if (alphanumericLong == UInt64NullValue)
+				return str.Clear();
+
+			// number of bits to store |[0..size]| = size + 1 values
+			// bsr(MaxSize + 1) = bsr(10 + 1) = 4  
+			// Cast length to signed int without sign-extension (with good optimizer should generate no instructions)
+			Int32 len = (Int32)(UInt32)(alphanumericLong >> (sizeof(Int64) * 8 - Alphanum10NumLengthBits));
+			
+			if (len <= (Int32)Alphanum10MaxLength)
+			{
+				Char[] data = str._data;
+				str._length = len;
+				if (data.Length < (Int32)Alphanum10MaxLength /* Sufficient capacity should always be reserved */)
+				{
+					throw new ArgumentException($"Logic error! MutableString \"{str}\" should be always allocated with sufficient capacity!", "str");
+				}
+
+<# for (Int32 l = 10; l > 0; --l) { #>
+				/*<#=l#>:*/ data[<#=l#> - 1] = (Char)(' ' + ((alphanumericLong >> (60 - 6 * (<#=l#>))) & 0x3F));
+<#}#>
+			} 
+			else 
+			if (len == (Int32)Alphanum10MaxLength + 1) // Alternate null value
+			{
+				return str.Clear();
+			}
+			else 
+			{
+				throw new ArgumentException($"Invalid ALPHANUMERIC(10) value: {alphanumericLong}", "alphanumericLong");
+			}
+	
+			return str;
+		}
+
+<#
+for (Int32 i = 0; i < stringTypes.Length; ++i)
+{
+#>
+		/// <summary>
+		/// Decodes ALPHANUMERIC(10) from Int64, returning <#=stringTypes[i]#>.
+		/// </summary>
+		/// <param name="alphanumericLong">Long Integer to decode.</param>
+		/// <returns>New <#=stringTypes[i]#> instance.</returns>
+		public static <#=stringTypes[i]#> To<#=stringTypes[i]#>(Int64 alphanumericLong)
+		{
+			<#if (stringTypes[i] == "IReadOnlyString") { #>
+				return ToMutableString(alphanumericLong);
+			<#}#>
+			return To<#=stringTypes[i]#>((UInt64)alphanumericLong);
+		}
+
+		/// <summary>
+		/// Decodes ALPHANUMERIC(10) from UInt64, returning <#=stringTypes[i]#>.
+		/// </summary>
+		/// <param name="alphanumericLong">Long Integer to decode.</param>
+		/// <returns>New <#=stringTypes[i]#> instance.</returns>
+		public static <#=stringTypes[i]#> To<#=stringTypes[i]#>(UInt64 alphanumericLong)
+		{
+			<#if (stringTypes[i] == "IReadOnlyString") { #>
+				return ToMutableString(alphanumericLong);
+			<#}#>
+			unsafe 
+			{
+				if (alphanumericLong == UInt64NullValue)
+					return null;
+
+				// number of bits to store |[0..size]| = size + 1 values
+				// bsr(MaxSize + 1) = bsr(10 + 1) = 4  
+
+				<#=stringInit[i]#>;
+				UInt64 len = alphanumericLong >> (sizeof(Int64) * 8 - Alphanum10NumLengthBits);
+				<#=stringGetData[i]#>
+				if (len <= Alphanum10MaxLength)
+				{
+<# for (Int32 l = 10; l > 0; --l) { #>
+					/*<#=l#>:*/ data[<#=l#> - 1] = (<#=stringCharType[i]#>)((UInt32)' ' + ((alphanumericLong >> (60 - 6 * (<#=l#>))) & 0x3F));
+<#}#>
+				} 
+				else 
+				if (len == Alphanum10MaxLength + 1) // Alternate null value
+				{
+					return null;
+				}
+				else 
+				{
+					throw new ArgumentException($"This value is not a valid ALPHANUMERIC(10): {alphanumericLong}", "alphanumericLong");
+				}
+	
+				return <#=stringReturn[i]#>;
+			}
+		}
+
+		/// <summary>
+		/// Encodes <#=stringTypes[i]#> with ALPHANUMERIC(10) encoder, returning Int64.
+		/// throws ArgumentException if the string is longer than 10 characters or contains symbols outside ['\x20'..'\x5F']
+		/// </summary>
+		/// <param name="str">String to encode.</param>
+		/// <returns>Resulting long integer.</returns>
+		public static Int64 ToAlphanumericInt64(this <#=stringTypes[i]#> str)
+		{
+			<#if (stringTypes[i] == "IReadOnlyString") { #>
+				if (str is MutableString) return ToAlphanumericInt64((MutableString)str);
+			<#}#>
+			return (Int64)ToAlphanumericUInt64(str);
+		}
+
+		/// <summary>
+		/// Encodes <#=stringTypes[i]#> with ALPHANUMERIC(10) encoder, returning UInt64.
+		/// throws ArgumentException if the string is longer than 10 characters or contains symbols outside ['\x20'..'\x5F']
+		/// </summary>
+		/// <param name="str">String to encode.</param>
+		/// <returns>Resulting long integer.</returns>
+		public static UInt64 ToAlphanumericUInt64(this <#=stringTypes[i]#> str)
+		{
+			<#if (stringTypes[i] == "IReadOnlyString") { #>
+				if (str is MutableString) return ToAlphanumericUInt64((MutableString)str);
+			<#}#>
+			UInt32 length;
+			// number of bits to store |[0..size]| = size + 1 values
+			// bsr(MaxSize + 1) = bsr(10 + 1) = 4  
+
+			if (null == str)
+				return UInt64NullValue;
+
+			length = (UInt32)<#=stringGetLength[i]#>;
+	
+			UInt64 acc = 0;
+			<#=stringGetReadOnlyData[i]#>
+	
+			UInt32 ch, check = 0;
+			switch (length) 
+			{
+<# for (Int32 l = 10; l > 0; --l) { #>
+				case <#=l#>: ch = (UInt32)(UInt16)data[<#=l#> - 1] - ' '; check |= ch; acc |= (UInt64)(ch & 0x3F) << (10 - <#=l#>) * 6; goto case <#=l - 1#>;
+<#}#>
+				case 0:
+					break;
+
+				default:
+					throw new ArgumentException($"String \"{str}\" is too long", "str");
+			}
+
+			if (check >= 0x40)
+				throw new ArgumentException($"String \"{str}\" contains invalid character", "str");
+	
+			return ((UInt64)length << (sizeof(Int64) * 8 - Alphanum10NumLengthBits)) + acc;
+		}
+
+<#
+}
+#>
+	}
+}

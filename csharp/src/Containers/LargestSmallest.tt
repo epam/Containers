@@ -1,0 +1,265 @@
+<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+<#
+String[] types = new String[] { "decimal", "double", "float", "Int32", "Int64", "decimal?", "double?", "float?", "Int32?", "Int64?", "TResult" };
+#>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+#if FinMath
+namespace FinMath.Statistics#elsenamespace EPAM.Deltix.Containers#endif{
+	/// <summary>
+	/// Some trivial Linq-like extensions, which for some reason missing in Linq.
+	/// </summary>
+	public static class LargestSmallest
+	{
+<#
+foreach (String type in types)
+{
+foreach (Boolean hasSelector in new Boolean[]{false,true})
+{
+foreach (Boolean isLargest in new Boolean[]{false,true})
+{
+foreach (Boolean getIndices in new Boolean[]{false,true})
+{
+var typeN = TypeN(type);
+var hasAbnormals = HasAbnormals(type);
+var isNullable = IsNullable(type);
+foreach (Boolean isIList in new Boolean[]{false,true})
+{
+#>
+		/// <summary>
+		/// Returns <#=isLargest?"largest":"smallest"#> elements (total - count) using selector to receive as transform function.
+		/// </summary>
+<#if(hasSelector) { #>
+		/// <typeparam name="TSource">The type of the elements of source.</typeparam>
+<#}#>
+<#if(type=="TResult") { #>
+		/// <typeparam name="TResult">The selected value implements IComparable.</typeparam>
+<#}#>
+		/// <param name="source">A sequence of values to determine the maximum value of.</param>
+		/// <param name="resultValues">Array to store <#=isLargest?"largest":"smallest"#> elements in source.</param>
+<#if(hasSelector) { #>
+		/// <param name="selector">A transform function to apply to each element.</param>
+<#}#>
+<# if (getIndices) { #>
+		/// <param name="resultIndices">Array to store indices of <#=isLargest?"largest":"smallest"#> elements in source.</param>
+<# } #>
+<#if(hasAbnormals) {#>
+		/// <param name="checkForAbnormals">Check is array contains NaN values and properly process them.</param>
+<#}#>
+		/// <returns>Number of elements stored.</returns>
+		public static Int32 <#=isLargest?"Largest":"Smallest"#><#= getIndices ? "Indices" : "" #><#=PrintTParam(type, hasSelector)#>(this IEnumerable<<#=hasSelector?"TSource":type#>> source, <#=hasSelector?(isIList?"IList<TSource>":"TSource[]")+" resultValues, Func<TSource,"+type+"> selector":(isIList?"IList<"+typeN+">":typeN+"[]")+" resultValues"#><#= getIndices ? ", "+(isIList?"IList<Int32>":"Int32[]")+" resultIndices" : "" #><#= hasAbnormals ? ", bool checkForAbnormals = false" : "" #>) <#=type == "TResult"?" where TResult : IComparable":""#>
+		{
+<# if (getIndices) { #>
+			if (resultValues.<#=isIList?"Count":"Length"#> != resultIndices.<#=isIList?"Count":"Length"#>)
+				throw new ArgumentException("The arrays must have the same size.", nameof(resultIndices));
+<# } #>
+			int count = resultValues.<#=isIList?"Count":"Length"#>;
+			if (count == 0) return 0;
+			Int32 length = 0;
+			<#= getIndices ? "Int32 sIndex = -1;" : "" #>
+
+<# foreach (var checkAbnormalsIf in hasAbnormals ? new bool[] {true, false} : new bool[] {false}) { #>
+			<#= hasAbnormals ? (checkAbnormalsIf ? "if(checkForAbnormals)" : "else") : "" #>
+			{
+				foreach (<#=hasSelector?"TSource":type#> s<#= hasSelector ? "S" : "" #><#= isNullable ? "N" : "" #> in source)
+				{
+					<#= getIndices ? "++sIndex;" : "" #>
+<# if (hasSelector) { #>
+					<#= type #> s<#= isNullable ? "N" : "" #> = selector(s<#= hasSelector ? "S" : "" #><#= isNullable ? "N" : "" #>);
+<# } #>
+<# if (isNullable) { #>
+					if (sN == null)
+						continue;
+					<#= typeN #> s = sN.Value;
+<# } #>
+<# if (checkAbnormalsIf) { #>
+					if (<#= typeN #>.IsNaN(s) || <#= typeN #>.IsNegativeInfinity(s) || <#= typeN #>.IsPositiveInfinity(s))
+						continue;
+<# } #>
+					if (length < count)
+					{
+						int index = length++;
+						while (index > 0)
+						{
+							int t = (index - 1) >> 1;
+							if (<#=PrintCmp(type, isLargest, hasSelector, "resultValues[t]", "s")#>)
+							{
+								resultValues[index] = resultValues[t];
+								<#= getIndices ? "resultIndices[index] = resultIndices[t];" : "" #>
+								index = t;
+							}
+							else
+								break;
+						}
+
+						resultValues[index] = s<#= hasSelector ? "S" + ( isNullable ? "N" : "" ) : "" #>;
+						<#= getIndices ? "resultIndices[index] = sIndex;" : "" #>
+					}
+					else if (<#=PrintCmp(type, isLargest, hasSelector, "s", "resultValues[0]")#>)
+					{
+						int index = 0;
+						int t = (index << 1) + 1;
+						while (t < count)
+						{
+							if (t + 1 < count && <#=PrintCmp(type, isLargest, hasSelector, "resultValues[t]", "resultValues[t+1]")#>)
+								++t;
+
+							if (<#=PrintCmp(type, isLargest, hasSelector, "s", "resultValues[t]")#>)
+							{
+								resultValues[index] = resultValues[t];
+								<#= getIndices ? "resultIndices[index] = resultIndices[t];" : "" #>
+								index = t;
+								t = (index << 1) + 1;
+							}
+							else
+								break;
+						}
+
+						resultValues[index] = s<#= hasSelector ? "S" + ( isNullable ? "N" : "" ) : "" #>;
+						<#= getIndices ? "resultIndices[index] = sIndex;" : "" #>
+					}
+				}
+			}
+<# } #>
+
+			for (int i = length-1; i > 0; --i)
+			{
+				<#=hasSelector?"TSource":typeN#> sValue = resultValues[i];
+				<#= getIndices ? "sIndex = resultIndices[i];" : "" #>
+
+				resultValues[i] = resultValues[0];
+				<#= getIndices ? "resultIndices[i] = resultIndices[0];" : "" #>
+
+				int index = 0;
+				int t = (index << 1) + 1;
+				while (t < i)
+				{
+					if (t + 1 < i && <#=PrintCmp(type, isLargest, hasSelector, "resultValues[t]", "resultValues[t+1]")#>)
+						++t;
+
+					if (<#=PrintCmp(type, isLargest, hasSelector, "sValue", "resultValues[t]")#>)
+					{
+						resultValues[index] = resultValues[t];
+						<#= getIndices ? "resultIndices[index] = resultIndices[t];" : "" #>
+						index = t;
+						t = (index << 1) + 1;
+					}
+					else
+						break;
+				}
+
+				resultValues[index] = sValue;
+				<#= getIndices ? "resultIndices[index] = sIndex;" : "" #>
+			}
+
+			return length;
+		}
+
+<#
+}
+#>
+		/// <summary>
+		/// Returns <#=isLargest?"largest":"smallest"#> elements (total - count) using selector to receive as transform function.
+		/// </summary>
+<#if(hasSelector) { #>
+		/// <typeparam name="TSource">The type of the elements of source.</typeparam>
+<#}#>
+<#if(type=="TResult") { #>
+		/// <typeparam name="TResult">The selected value implements IComparable.</typeparam>
+<#}#>
+		/// <param name="source">A sequence of values to determine the maximum value of.</param>
+		/// <param name="count">Numbers of elements to select.</param>
+<#if(hasSelector) { #>
+		/// <param name="selector">A transform function to apply to each element.</param>
+<#}#>
+<#if(hasAbnormals) {#>
+		/// <param name="checkForAbnormals">Check is array contains NaN values and properly process them.</param>
+<#}#>
+		/// <returns><#= getIndices ? "Indices of s" : "S" #>elected <#=isLargest?"largest":"smallest"#> elements.</returns>
+		public static <#= getIndices ? "Int32[]" : (hasSelector?"TSource[]":typeN+"[]")#> <#=isLargest?"Largest":"Smallest"#><#= getIndices ? "Indices" : "" #><#=PrintTParam(type, hasSelector)#>(this IEnumerable<<#=hasSelector?"TSource":type#>> source, Int32 count<#=hasSelector?", Func<TSource,"+type+"> selector":""#><#= hasAbnormals ? ", bool checkForAbnormals = false" : "" #>) <#=type == "TResult"?" where TResult : IComparable":""#>
+		{
+			<#= hasSelector ? "TSource[] resultValues = new TSource[count];" : typeN+"[] resultValues = new "+typeN+"[count];"#>
+			<#= getIndices ? "Int32[] resultIndices = new Int32[count];" : "" #>
+			Int32 length = <#=isLargest?"Largest":"Smallest"#><#= getIndices ? "Indices" : "" #>(source, resultValues<#=hasSelector?", selector":""#><#= getIndices ? ", resultIndices" : "" #><#= hasAbnormals ? ", checkForAbnormals" : "" #>);
+			if (length != count)
+				Array.Resize(ref result<#= getIndices ? "Indices" : "Values" #>, length);
+			return result<#= getIndices ? "Indices" : "Values" #>;
+		}
+
+<#
+}
+}
+}
+}
+#>
+	}
+}
+<#+
+public String PrintTParam(String type, Boolean hasSelector)
+{
+	if (type == "TResult")
+	{
+		if (hasSelector)
+			return "<TSource,TResult>";
+		else
+			return "<TResult>";
+	}
+	else 
+	{
+		if (hasSelector)
+			return "<TSource>";
+		else
+			return "";
+	}
+}
+
+public String PrintCmp(String type, Boolean isLargest, Boolean hasSelector, String elementA, String elementB)
+{
+	var cmpChar = isLargest ? ">" : "<";
+	if (hasSelector)
+	{
+		if (!elementA.Equals("s"))
+			elementA = string.Format("selector({0})", elementA);
+		if (!elementB.Equals("s"))
+			elementB = string.Format("selector({0})", elementB);
+	}
+
+	if (type == "TResult")
+		return String.Format("{0}.CompareTo({1}) {2} 0", elementA, elementB, cmpChar);
+	else
+		return String.Format("{0} {2} {1}", elementA, elementB, cmpChar);
+}
+
+private bool IsNullable(string type)
+{
+	return type[type.Length-1] == '?';
+}
+
+private string TypeN(string type)
+{
+	string typeN = IsNullable(type) ? type.Remove(type.Length-1) : type;
+	if (typeN == "Vector")
+		typeN = "double";
+	return typeN;
+}
+
+private bool HasAbnormals(string type)
+{
+	var typeN = TypeN(type);
+
+	bool hasAbnormals = false;
+	foreach(var tA in new string[] { "double", "float" })
+		hasAbnormals |= string.Compare(typeN, 0, tA, 0, tA.Length, true) == 0;
+
+	return hasAbnormals;
+}
+#>

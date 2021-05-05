@@ -1,0 +1,12 @@
+package com.epam.deltix.containers.generated;
+
+import java.util.Objects;
+
+@FunctionalInterface
+public interface ${first_name}${second_name}Consumer {
+    void accept(${first_type} first, ${second_type} second);
+    default ${first_name}${second_name}Consumer andThen(${first_name}${second_name}Consumer after) {
+        Objects.requireNonNull(after);
+        return (${first_type} t, ${second_type} t1) -> { accept(t, t1); after.accept(t, t1); };
+    }
+}

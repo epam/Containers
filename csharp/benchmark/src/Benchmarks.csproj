@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFrameworks>net46;netcoreapp2.0</TargetFrameworks>
+		<OutputPath>..\bin\$(Configuration)</OutputPath>
+		<Optimize>true</Optimize>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="BenchmarkDotNet" Version="0.10.14" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\csharp\src\Containers\RTMath.Containers.csproj" />
+	</ItemGroup>
+</Project>

@@ -1,0 +1,7 @@
+package com.epam.deltix.containers.generated;
+
+
+@FunctionalInterface
+public interface ${first_name}To${second_name}Function {
+    ${second_type} apply(${first_type} first);
+}

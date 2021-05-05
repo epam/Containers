@@ -1,0 +1,99 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace EPAM.Deltix.Containers{
+	internal interface IBinaryArrayOptimization
+	{
+		Int32 GetHashCode(Int64[] data, Int32 length);
+		void CopyTo(Int64[] src, Int64[] dst, Int32 length);
+		Boolean Equals(Int64[] d1, Int64[] d2, Int32 length);
+	}
+<#
+for (Int32 i = 1; i <= 8; ++i)
+{
+#>
+
+	internal class BinaryArrayOptimization<#=i#> : IBinaryArrayOptimization
+	{
+		public int GetHashCode(long[] data, Int32 length) 
+		{ 
+			Int32 hash = 0;
+<#
+for (Int32 j = 0; j < i; ++j)
+{
+#>
+			hash ^= (Int32)(data[<#=j#>] & 0xFFFFFFFF) ^ (Int32)(data[<#=j#>] >> 32); 
+<#}#>
+			return hash & 0x3FFFFFFF;
+		}
+
+		public void CopyTo(Int64[] src, Int64[] dst, Int32 length) 
+		{ 
+<#
+for (Int32 j = 0; j < i; ++j)
+{
+#>
+			dst[<#=j#>] = src[<#=j#>]; 
+<#}#>
+		}
+
+		public bool Equals(long[] d1, long[] d2, Int32 length) 
+		{ 
+			return<#for (Int32 j = 0; j < i; ++j) { #> <#=j != 0 ? "&&" : ""#> d1[<#=j#>] == d2[<#=j#>]<#}#>;
+		}
+	}
+<#}#>
+
+	internal class BinaryArrayOptimizationTotal : IBinaryArrayOptimization
+	{
+		public int GetHashCode(long[] data, int length)
+		{
+			Int32 hash = 0;
+			for (Int32 i = 0; i < length; ++i)
+				hash ^= (Int32)(data[i] & 0xFFFFFFFF) ^ (Int32)(data[i] >> 32);
+			return hash & 0x3FFFFFFF;
+		}
+
+		public void CopyTo(long[] src, long[] dst, int length)
+		{
+			for (Int32 i = 0; i < length; ++i)
+				dst[i] = src[i];
+		}
+
+		public bool Equals(long[] d1, long[] d2, int length)
+		{
+			for (Int32 i = 0; i < length; ++i)
+				if (d1[i] != d2[i])
+					return false;
+			return true;
+		}
+	}
+	internal class BinaryArrayOptimization0 : IBinaryArrayOptimization
+	{
+		public int GetHashCode(long[] data, int length)
+		{			
+			return 0;
+		}
+
+		public void CopyTo(long[] src, long[] dst, int length)
+		{
+		}
+
+		public bool Equals(long[] d1, long[] d2, int length)
+		{
+			return true;
+		}
+	}
+
+
+}

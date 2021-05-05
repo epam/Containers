@@ -1,0 +1,59 @@
+package com.epam.deltix.containers.generated;
+
+
+import java.util.Objects;
+
+public interface TupleObj${value}ReadOnly<T1## 
+#if($value > 1)## 
+#foreach ($index in [2..$value]) 
+, T${index}##
+#end 
+#end> {
+
+  T1 getElement1();
+
+  #if($value > 1)
+  T2 getElement2();
+  #end
+  
+  #if ($value > 2)
+  T3 getElement3();
+  #end
+
+  #if ($value > 3)
+  T4 getElement4();
+  #end
+  
+  #if ($value > 4)
+  T5 getElement5();
+  #end
+
+  #if ($value > 5)
+  T6 getElement6();
+  #end
+
+  #if ($value > 6)
+  T7 getElement7();
+  #end
+
+  #if ($value > 7)
+  T8 getElement8();
+  #end
+
+  #if ($value > 8)
+  T9 getElement9();
+  #end
+
+  #if ($value > 9)
+  T10 getElement10();
+  #end
+
+  void copyTo(TupleObj${value}<T1## 
+#if($value > 1)## 
+#foreach ($index in [2..$value]) 
+, T${index}##
+#end 
+#end> destination);
+
+
+}

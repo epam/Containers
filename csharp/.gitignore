@@ -1,0 +1,5 @@
+/packages/
+/build/
+/Binary/
+tools/*
+!tools/packages.config

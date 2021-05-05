@@ -1,0 +1,161 @@
+package com.epam.deltix.containers.generated;
+
+import sun.misc.Unsafe;
+
+import java.lang.reflect.Field;
+
+import static java.lang.Long.reverseBytes;
+import static java.lang.Long.rotateRight;
+
+import com.epam.deltix.containers.binaryarrayoptimizations.BinaryArrayOptimization;
+
+
+public class BinaryArrayOptimization${value} implements BinaryArrayOptimization
+{
+    public static Unsafe u;
+    static {
+        try {
+            Field f = Unsafe.class.getDeclaredField("theUnsafe");
+            f.setAccessible(true);
+
+            u = (Unsafe) f.get(null);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    };
+
+
+    private static long fetch64(long[] in, long off) {
+        return u.getLong(in, off + Unsafe.ARRAY_LONG_BASE_OFFSET);
+    }
+
+
+
+
+
+    private static final long P1 = -7046029288634856825L;
+    private static final long P2 = -4417276706812531889L;
+    private static final long P3 = 1609587929392839161L;
+    private static final long P4 = -8796714831421723037L;
+    private static final long P5 = 2870177450012600261L;
+
+    @Override
+    public long xxHash64(long[] input, long length) {
+    	#if ($value > 1) 
+    	long hash = 257 + P5;
+    	#if ($value > 3)##
+	
+	    long v1 = 257 + P1 + P2;
+        long v2 = 257 + P2;
+        long v3 = 257;
+        long v4 = 257 - P1;
+    	
+    	#end##
+    	#if ($value / 4 > 0)##
+    		#set ($border = $value / 4 - 1)##
+    		#foreach ($index in [0..$border])##
+    			#set ($print = $index * 4)
+    	
+    	v1 += input[$print] * P2;
+       	v1 = Long.rotateLeft(v1, 31); 
+       	v1 *= P1;  
+        		#set ($print = $index * 4 + 1) 
+    	
+        v2 += input[$print] * P2; 
+        v2 = Long.rotateLeft(v2, 31); 
+       	v2 *= P1;
+			#set ($print = $index * 4 + 2)
+    	
+			
+	    v3 += input[$print] * P2;
+        v3 = Long.rotateLeft(v3, 31); 
+        v3 *= P1;                       
+        		#set ($print = $index * 4 + 3) 
+    	
+        v4 += input[$print] * P2;
+       	v4 = Long.rotateLeft(v4, 31); 
+        v4 *= P1;
+		
+		#end##
+	#end## 
+	#if ($value > 3)##
+		
+	    hash = Long.rotateLeft(v1, 1)
+               + Long.rotateLeft(v2, 7)
+               + Long.rotateLeft(v3, 12)
+               + Long.rotateLeft(v4, 18);
+
+        v1 *= P2;
+        v1 = Long.rotateLeft(v1, 31);
+       	v1 *= P1;
+        hash ^= v1;
+       	hash = hash * P1 + P4;
+        v2 *= P2;
+        v2 = Long.rotateLeft(v2, 31);
+        v2 *= P1;
+        hash ^= v2;
+       	hash = hash * P1 + P4;
+        v3 *= P2;
+        v3 = Long.rotateLeft(v3, 31);
+        v3 *= P1;
+        hash ^= v3;
+        hash = hash * P1 + P4;
+        v4 *= P2;
+        v4 = Long.rotateLeft(v4, 31);
+        v4 *= P1;
+       	hash ^= v4;
+        hash = hash * P1 + P4;
+	
+	#end##
+	#if ($value % 4 > 0)##
+	
+	    long k1 = 0;
+		#set($border = $value % 4 - 1)##
+		#foreach ($index in [0..$border])##
+			#set ($print = $value / 4 * 4 + $index)## 
+	
+	    k1 = input[$print];
+        k1 *= P2;
+        k1 = Long.rotateLeft(k1, 31); 
+        k1 *= P1; 
+        hash ^= k1;
+        hash = Long.rotateLeft(hash, 27) * P1 + P4;
+ 		#end##
+	#end##
+	return finalize(hash + length); 
+	#end
+	#if ($value == 1)
+	return length + (input[0] ^ Long.rotateLeft(input[0], 19) ^ Long.rotateLeft(input[0], 38) ^ Long.rotateLeft(input[0], 57)); 
+	#end
+	#if ($value == 0)
+	return 0;
+	#end
+
+    }
+
+    @Override
+    public boolean equals(long[] data1, long[] data2, int count) {
+    	#set($border = $value - 1)##
+    	#if($border >= 0)## 
+    	#foreach ($index in [0..$border])##\n
+
+	    if (data1[$index] != data2[$index]) return false; 
+    	#end##
+    	#end##
+    	
+    	return true;     
+    }
+
+    private static long finalize(long hash) {
+        hash ^= hash >>> 33;
+        hash *= P2;
+        hash ^= hash >>> 29;
+        hash *= P3;
+        hash ^= hash >>> 32;
+        return hash;
+    }
+
+	
+
+
+}

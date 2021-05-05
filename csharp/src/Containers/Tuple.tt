@@ -1,0 +1,158 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+<#
+	String[] template = new String[] {"<T1>", "<T1, T2>", "<T1, T2, T3>", "<T1, T2, T3, T4>", "<T1, T2, T3, T4, T5>", "<T1, T2, T3, T4, T5, T6>",
+	"<T1, T2, T3, T4, T5, T6, T7>", "<T1, T2, T3, T4, T5, T6, T7, T8>", "<T1, T2, T3, T4, T5, T6, T7, T8, T9>", "<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>"};
+
+	String[] constructorParametets = new String[] {"T1 item1", "T1 item1, T2 item2", "T1 item1, T2 item2, T3 item3", 
+	"T1 item1, T2 item2, T3 item3, T4 item4", "T1 item1, T2 item2, T3 item3, T4 item4, T5 item5", "T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6",
+	"T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7", "T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8", 
+	"T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9", 
+	"T1 item1, T2 item2, T3 item3, T4 item4, T5 item5, T6 item6, T7 item7, T8 item8, T9 item9, T10 item10"};
+
+#>
+
+namespace EPAM.Deltix.Containers{
+<#
+for (Int32 i = 0; i < 10; ++i)
+{
+#>
+	public interface TupleReadOnly<#=template[i]#> {
+<#
+for (Int32 j = 0; j <= i; ++j)
+{
+#>
+		T<#=j + 1#> Item<#=j + 1#> {get;}
+<#}#>
+   }
+
+   public class TupleReference<#=template[i]#> : TupleReadOnly<#=template[i]#> {
+<#for (Int32 j = 0; j <= i; ++j)
+{
+#>
+		public T<#=j + 1#> Item<#=j + 1#> {get; set;}
+<#}#>
+		public TupleReference() {
+<#for (Int32 j = 0; j <= i; ++j)
+{
+#>			
+			Item<#=j + 1#> = default(T<#=j + 1#>);
+			
+<#}#>
+
+		}
+
+		public TupleReference(<#=constructorParametets[i]#>) {
+<#for (Int32 j = 0; j <= i; ++j)
+{
+#>			
+			Item<#=j + 1#> = item<#=j + 1#>;
+			
+<#}#>
+
+		}
+		public override int GetHashCode() {
+			Int32 hashCode = 0;
+<#for (Int32 j = 0; j <= i; ++j)
+{
+#>			
+			hashCode *= 31;
+			if (Item<#=j + 1#> != null) hashCode += Item<#=j + 1#>.GetHashCode();
+			
+<#}#>
+			return hashCode;
+   
+		}
+
+		public override string ToString() {
+			MutableString str = new MutableString();
+<#for (Int32 j = 0; j <= i; ++j)
+{
+#>			
+			str.Append("Item<#=j + 1#> = ");
+			if (Item<#=j + 1#> != null) str.Append(Item<#=j + 1#>.ToString()).Append("; "); else str.Append("null; ");
+			
+<#}#>
+			return str.ToString();
+		}
+
+		public override bool Equals(object obj)  {
+			if (!(obj is TupleReadOnly<#=template[i]#>)) return false;
+			TupleReadOnly<#=template[i]#> other = (TupleReadOnly<#=template[i]#>)obj;
+<#for (Int32 j = 0; j <= i; ++j)
+{
+#>			
+			if (!Object.Equals(Item<#=j + 1#>, other.Item<#=j + 1#>)) return false;
+			
+<#}#>
+			return true;
+
+		}
+	}
+   
+
+	public struct TupleValue<#=template[i]#> : TupleReadOnly<#=template[i]#> {
+<#for (Int32 j = 0; j <= i; ++j)
+{
+#>
+		public T<#=j + 1#> Item<#=j + 1#> {get; set;}
+<#}#>
+		public TupleValue(<#=constructorParametets[i]#>) {
+<#for (Int32 j = 0; j <= i; ++j)
+{
+#>			
+			Item<#=j + 1#> = item<#=j + 1#>;
+			
+<#}#>
+		}
+
+		public override int GetHashCode() {
+			Int32 hashCode = 0;
+<#for (Int32 j = 0; j <= i; ++j)
+{
+#>			
+			hashCode *= 31;
+			if (Item<#=j + 1#> != null) hashCode += Item<#=j + 1#>.GetHashCode();
+			
+<#}#>
+			return hashCode;
+   
+		}
+
+		public override string ToString() {
+			MutableString str = new MutableString();
+<#for (Int32 j = 0; j <= i; ++j)
+{
+#>			
+			str.Append("Item<#=j + 1#> = ");
+			if (Item<#=j + 1#> != null) str.Append(Item<#=j + 1#>.ToString()).Append("; "); else str.Append("null; ");
+			
+<#}#>
+			return str.ToString();
+		}
+
+		public override bool Equals(object obj)  {
+			if (!(obj is TupleReadOnly<#=template[i]#>)) return false;
+			TupleReadOnly<#=template[i]#> other = (TupleReadOnly<#=template[i]#>)obj;
+<#for (Int32 j = 0; j <= i; ++j)
+{
+#>			
+			if (!Object.Equals(Item<#=j + 1#>, other.Item<#=j + 1#>)) return false;
+			
+<#}#>
+			return true;
+
+		}
+	}
+   
+   
+   
+   <#
+   }
+   #>
+
+
+
+}

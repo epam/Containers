@@ -1,0 +1,58 @@
+package com.epam.deltix.containers.generated;
+
+
+import java.util.Objects;
+
+
+@FunctionalInterface
+public interface Obj${value}Consumer<T1## 
+#if($value > 1)## 
+#foreach ($index in [2..$value]) 
+, T${index}##
+#end 
+#end> {
+    void accept(T1 argument1##
+#if($value > 1)##                   
+#foreach ($index in [2..$value])##
+, T${index} argument${index}##
+#end## 
+#end##
+);
+    default Obj${value}Consumer<? super T1## 
+#if($value > 1) 
+#foreach ($index in [2..$value])
+, T${index}##
+#end 
+#end
+> andThen(Obj${value}Consumer<? super T1## 
+#if($value > 1) 
+#foreach ($index in [2..$value]) 
+, ? super T${index}##
+#end 
+#end
+> after) {
+        Objects.requireNonNull(after);
+        return (argument1##
+#if($value > 1)##                   
+#foreach ($index in [2..$value])##
+, argument${index}##
+#end
+#end
+) -> 
+        { 
+            accept(argument1##
+#if($value > 1)##                   
+#foreach ($index in [2..$value])##
+, argument${index}##
+#end
+#end
+); after.accept(argument1##
+#if($value > 1)##                   
+#foreach ($index in [2..$value])##
+, argument${index}##
+#end
+#end
+); 
+        };
+    }    
+} 

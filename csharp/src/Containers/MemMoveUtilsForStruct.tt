@@ -1,0 +1,701 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+<#
+String[] types = new String[] { "void*", "byte*", "short*", "long*", "ushort*", "ulong*", "uint*", "char*", "double*", "float*", "bool*", "decimal*", "IntPtr"};
+String[] types1 = new String[] {"Byte", "Char", "Int32", "Int64", "Int16", "UInt16", "UInt32", "UInt64", "Double", "Single", "bool"};
+#>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.InteropServices;
+
+namespace EPAM.Deltix.Containers{
+	/// <summary>
+	/// Class for work with memory and structs
+	/// </summary>
+	/// <typeparam name="Struct">Type of struct</typeparam>
+	public class MemoryUtilsForStruct<Struct> where Struct : struct
+	{
+		delegate void MyDelegate1(Struct[] source, int sourceOffset, IntPtr destination, int size); 
+		MyDelegate1 myDelegateMove1, myDelegateMoveLeft1, myDelegateMoveRight1, myDelegateCopy1;
+		delegate void MyDelegate2(IntPtr source, Struct[] destination, int destinationOffset, int size); 
+		MyDelegate2 myDelegateMove2, myDelegateMoveLeft2, myDelegateMoveRight2, myDelegateCopy2;
+		delegate void MyDelegate3(Struct[] source, int sourceOffset, Struct[] destination, int destinationOffset, int size); 
+		MyDelegate3 myDelegateMove3, myDelegateMoveLeft3, myDelegateMoveRight3, myDelegateCopy3;
+		private unsafe void MoveInternal(Struct[] source, int sourceOffset, IntPtr destination, int size)
+		{
+			if (myDelegateMove1 == null)
+			{
+				Type[] methodArgs = { typeof(Struct[]), typeof(int), typeof(IntPtr), typeof(int) };
+				Type[] methodArgs1 = { typeof(IntPtr), typeof(IntPtr), typeof(int) };
+
+				DynamicMethod getPointer = new DynamicMethod("Move1", typeof(void), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+				ILGenerator generator = getPointer.GetILGenerator();
+				LocalBuilder t = generator.DeclareLocal(typeof(IntPtr), true);
+				generator.Emit(OpCodes.Ldarg_0, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+
+				generator.Emit(OpCodes.Ldarg_1);
+				generator.Emit(OpCodes.Add);
+				generator.Emit(OpCodes.Ldarg_2);
+				generator.Emit(OpCodes.Ldarg_3);				
+				generator.Emit(OpCodes.Call, typeof(Deltix.Containers.MemoryUtils).GetMethod("Move", methodArgs1));
+				generator.Emit(OpCodes.Ret);
+				
+				myDelegateMove1 = (MyDelegate1)getPointer.CreateDelegate(typeof(MyDelegate1));
+			}
+	
+			myDelegateMove1(source, sourceOffset, destination, size);
+		}
+		private unsafe void MoveInternal(IntPtr source, Struct[] destination, int destinationOffset, int size)
+		{
+			if (myDelegateMove2 == null)
+			{
+				Type[] methodArgs = { typeof(IntPtr), typeof(Struct[]), typeof(int), typeof(int) };
+				Type[] methodArgs1 = { typeof(IntPtr), typeof(IntPtr), typeof(int) };
+
+				DynamicMethod getPointer = new DynamicMethod("Move2", typeof(void), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+				ILGenerator generator = getPointer.GetILGenerator();
+				LocalBuilder t = generator.DeclareLocal(typeof(IntPtr), true);
+				generator.Emit(OpCodes.Ldarg_0);
+				generator.Emit(OpCodes.Ldarg_1, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+				generator.Emit(OpCodes.Ldarg_2);
+				generator.Emit(OpCodes.Add);
+				generator.Emit(OpCodes.Ldarg_3);				
+				generator.Emit(OpCodes.Call, typeof(Deltix.Containers.MemoryUtils).GetMethod("Move", methodArgs1));
+				generator.Emit(OpCodes.Ret);
+				
+				myDelegateMove2 = (MyDelegate2)getPointer.CreateDelegate(typeof(MyDelegate2));
+			}
+	
+			myDelegateMove2(source, destination, destinationOffset, size);
+		}
+
+		private unsafe void MoveInternal(Struct[] source, int sourceOffset, Struct[] destination, int destinationOffset, int size)
+		{
+			if (myDelegateMove3 == null)
+			{
+				Type[] methodArgs = { typeof(Struct[]), typeof(int), typeof(Struct[]), typeof(int), typeof(int) };
+				Type[] methodArgs1 = { typeof(IntPtr), typeof(IntPtr), typeof(int) };
+
+				DynamicMethod getPointer = new DynamicMethod("Move3", typeof(void), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+				ILGenerator generator = getPointer.GetILGenerator();
+				LocalBuilder t = generator.DeclareLocal(typeof(IntPtr), true);
+				
+				generator.Emit(OpCodes.Ldarg_0, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+				generator.Emit(OpCodes.Ldarg_1);
+				generator.Emit(OpCodes.Add);
+				
+				generator.Emit(OpCodes.Ldarg_2, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+				generator.Emit(OpCodes.Ldarg_3);
+				generator.Emit(OpCodes.Add);
+				
+				generator.Emit(OpCodes.Ldarg_S, 4);
+				generator.Emit(OpCodes.Call, typeof(Deltix.Containers.MemoryUtils).GetMethod("Move", methodArgs1));
+				generator.Emit(OpCodes.Ret);
+				
+				myDelegateMove3 = (MyDelegate3)getPointer.CreateDelegate(typeof(MyDelegate3));
+			
+			}
+	
+			myDelegateMove3(source, sourceOffset, destination, destinationOffset, size);
+		}
+
+
+		///
+		private unsafe void MoveLeftInternal(Struct[] source, int sourceOffset, IntPtr destination, int size)
+		{
+			if (myDelegateMoveLeft1 == null)
+			{
+				Type[] methodArgs = { typeof(Struct[]), typeof(int), typeof(IntPtr), typeof(int) };
+				Type[] methodArgs1 = { typeof(IntPtr), typeof(IntPtr), typeof(int) };
+
+				DynamicMethod getPointer = new DynamicMethod("MoveLeft1", typeof(void), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+				ILGenerator generator = getPointer.GetILGenerator();
+				LocalBuilder t = generator.DeclareLocal(typeof(IntPtr), true);
+				generator.Emit(OpCodes.Ldarg_0, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+
+				generator.Emit(OpCodes.Ldarg_1);
+				generator.Emit(OpCodes.Add);
+				generator.Emit(OpCodes.Ldarg_2);
+				generator.Emit(OpCodes.Ldarg_3);				
+				generator.Emit(OpCodes.Call, typeof(Deltix.Containers.MemoryUtils).GetMethod("MoveLeft", methodArgs1));
+				generator.Emit(OpCodes.Ret);
+				
+				myDelegateMoveLeft1 = (MyDelegate1)getPointer.CreateDelegate(typeof(MyDelegate1));
+			}
+	
+			myDelegateMoveLeft1(source, sourceOffset, destination, size);
+		}
+		private unsafe void MoveLeftInternal(IntPtr source, Struct[] destination, int destinationOffset, int size)
+		{
+			if (myDelegateMove2 == null)
+			{
+				Type[] methodArgs = { typeof(IntPtr), typeof(Struct[]), typeof(int), typeof(int) };
+				Type[] methodArgs1 = { typeof(IntPtr), typeof(IntPtr), typeof(int) };
+
+				DynamicMethod getPointer = new DynamicMethod("MoveLeft2", typeof(void), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+				ILGenerator generator = getPointer.GetILGenerator();
+				LocalBuilder t = generator.DeclareLocal(typeof(IntPtr), true);
+				generator.Emit(OpCodes.Ldarg_0);
+				generator.Emit(OpCodes.Ldarg_1, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+				generator.Emit(OpCodes.Ldarg_2);
+				generator.Emit(OpCodes.Add);
+				generator.Emit(OpCodes.Ldarg_3);				
+				generator.Emit(OpCodes.Call, typeof(Deltix.Containers.MemoryUtils).GetMethod("MoveLeft", methodArgs1));
+				generator.Emit(OpCodes.Ret);
+				
+				myDelegateMoveLeft2 = (MyDelegate2)getPointer.CreateDelegate(typeof(MyDelegate2));
+			}
+	
+			myDelegateMoveLeft2(source, destination, destinationOffset, size);
+		}
+
+		private unsafe void MoveLeftInternal(Struct[] source, int sourceOffset, Struct[] destination, int destinationOffset, int size)
+		{
+			if (myDelegateMove3 == null)
+			{
+				Type[] methodArgs = { typeof(Struct[]), typeof(int), typeof(Struct[]), typeof(int), typeof(int) };
+				Type[] methodArgs1 = { typeof(IntPtr), typeof(IntPtr), typeof(int) };
+
+				DynamicMethod getPointer = new DynamicMethod("MoveLeft3", typeof(void), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+				ILGenerator generator = getPointer.GetILGenerator();
+				LocalBuilder t = generator.DeclareLocal(typeof(IntPtr), true);
+				
+				generator.Emit(OpCodes.Ldarg_0, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+				generator.Emit(OpCodes.Ldarg_1);
+				generator.Emit(OpCodes.Add);
+				
+				generator.Emit(OpCodes.Ldarg_2, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+				generator.Emit(OpCodes.Ldarg_3);
+				generator.Emit(OpCodes.Add);
+				
+				generator.Emit(OpCodes.Ldarg_S, 4);
+				generator.Emit(OpCodes.Call, typeof(Deltix.Containers.MemoryUtils).GetMethod("MoveLeft", methodArgs1));
+				generator.Emit(OpCodes.Ret);
+				
+				myDelegateMoveLeft3 = (MyDelegate3)getPointer.CreateDelegate(typeof(MyDelegate3));
+			
+			}
+	
+			myDelegateMoveLeft3(source, sourceOffset, destination, destinationOffset, size);
+		}
+
+
+		///
+		private unsafe void MoveRightInternal(Struct[] source, int sourceOffset, IntPtr destination, int size)
+		{
+			if (myDelegateMoveRight1 == null)
+			{
+				Type[] methodArgs = { typeof(Struct[]), typeof(int), typeof(IntPtr), typeof(int) };
+				Type[] methodArgs1 = { typeof(IntPtr), typeof(IntPtr), typeof(int) };
+
+				DynamicMethod getPointer = new DynamicMethod("MoveRight1", typeof(void), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+				ILGenerator generator = getPointer.GetILGenerator();
+				LocalBuilder t = generator.DeclareLocal(typeof(IntPtr), true);
+				generator.Emit(OpCodes.Ldarg_0, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+
+				generator.Emit(OpCodes.Ldarg_1);
+				generator.Emit(OpCodes.Add);
+				generator.Emit(OpCodes.Ldarg_2);
+				generator.Emit(OpCodes.Ldarg_3);				
+				generator.Emit(OpCodes.Call, typeof(Deltix.Containers.MemoryUtils).GetMethod("MoveRight", methodArgs1));
+				generator.Emit(OpCodes.Ret);
+				
+				myDelegateMoveRight1 = (MyDelegate1)getPointer.CreateDelegate(typeof(MyDelegate1));
+			}
+	
+			myDelegateMoveRight1(source, sourceOffset, destination, size);
+		}
+		private unsafe void MoveRightInternal(IntPtr source, Struct[] destination, int destinationOffset, int size)
+		{
+			if (myDelegateMove2 == null)
+			{
+				Type[] methodArgs = { typeof(IntPtr), typeof(Struct[]), typeof(int), typeof(int) };
+				Type[] methodArgs1 = { typeof(IntPtr), typeof(IntPtr), typeof(int) };
+
+				DynamicMethod getPointer = new DynamicMethod("MoveRight2", typeof(void), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+				ILGenerator generator = getPointer.GetILGenerator();
+				LocalBuilder t = generator.DeclareLocal(typeof(IntPtr), true);
+				generator.Emit(OpCodes.Ldarg_0);
+				generator.Emit(OpCodes.Ldarg_1, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+				generator.Emit(OpCodes.Ldarg_2);
+				generator.Emit(OpCodes.Add);
+				generator.Emit(OpCodes.Ldarg_3);				
+				generator.Emit(OpCodes.Call, typeof(Deltix.Containers.MemoryUtils).GetMethod("MoveRight", methodArgs1));
+				generator.Emit(OpCodes.Ret);
+				
+				myDelegateMoveRight2 = (MyDelegate2)getPointer.CreateDelegate(typeof(MyDelegate2));
+			}
+	
+			myDelegateMoveRight2(source, destination, destinationOffset, size);
+		}
+
+		private unsafe void MoveRightInternal(Struct[] source, int sourceOffset, Struct[] destination, int destinationOffset, int size)
+		{
+			if (myDelegateMove3 == null)
+			{
+				Type[] methodArgs = { typeof(Struct[]), typeof(int), typeof(Struct[]), typeof(int), typeof(int) };
+				Type[] methodArgs1 = { typeof(IntPtr), typeof(IntPtr), typeof(int) };
+
+				DynamicMethod getPointer = new DynamicMethod("MoveRight3", typeof(void), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+				ILGenerator generator = getPointer.GetILGenerator();
+				LocalBuilder t = generator.DeclareLocal(typeof(IntPtr), true);
+				
+				generator.Emit(OpCodes.Ldarg_0, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+				generator.Emit(OpCodes.Ldarg_1);
+				generator.Emit(OpCodes.Add);
+				
+				generator.Emit(OpCodes.Ldarg_2, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+				generator.Emit(OpCodes.Ldarg_3);
+				generator.Emit(OpCodes.Add);
+				
+				generator.Emit(OpCodes.Ldarg_S, 4);
+				generator.Emit(OpCodes.Call, typeof(Deltix.Containers.MemoryUtils).GetMethod("MoveRight", methodArgs1));
+				generator.Emit(OpCodes.Ret);
+				
+				myDelegateMoveRight3 = (MyDelegate3)getPointer.CreateDelegate(typeof(MyDelegate3));
+			
+			}
+	
+			myDelegateMoveRight3(source, sourceOffset, destination, destinationOffset, size);
+		}
+
+
+		private unsafe void CopyInternal(Struct[] source, int sourceOffset, IntPtr destination, int size)
+		{
+			if (myDelegateCopy1 == null)
+			{
+				Type[] methodArgs = { typeof(Struct[]), typeof(int), typeof(IntPtr), typeof(int) };
+				Type[] methodArgs1 = { typeof(IntPtr), typeof(IntPtr), typeof(int) };
+
+				DynamicMethod getPointer = new DynamicMethod("Copy1", typeof(void), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+				ILGenerator generator = getPointer.GetILGenerator();
+				LocalBuilder t = generator.DeclareLocal(typeof(IntPtr), true);
+				generator.Emit(OpCodes.Ldarg_0, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+
+				generator.Emit(OpCodes.Ldarg_1);
+				generator.Emit(OpCodes.Add);
+				generator.Emit(OpCodes.Ldarg_2);
+				generator.Emit(OpCodes.Ldarg_3);				
+				generator.Emit(OpCodes.Call, typeof(Deltix.Containers.MemoryUtils).GetMethod("Copy", methodArgs1));
+				generator.Emit(OpCodes.Ret);
+				
+				myDelegateCopy1 = (MyDelegate1)getPointer.CreateDelegate(typeof(MyDelegate1));
+			}
+	
+			myDelegateCopy1(source, sourceOffset, destination, size);
+		}
+		private unsafe void CopyInternal(IntPtr source, Struct[] destination, int destinationOffset, int size)
+		{
+			if (myDelegateMove2 == null)
+			{
+				Type[] methodArgs = { typeof(IntPtr), typeof(Struct[]), typeof(int), typeof(int) };
+				Type[] methodArgs1 = { typeof(IntPtr), typeof(IntPtr), typeof(int) };
+
+				DynamicMethod getPointer = new DynamicMethod("Copy2", typeof(void), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+				ILGenerator generator = getPointer.GetILGenerator();
+				LocalBuilder t = generator.DeclareLocal(typeof(IntPtr), true);
+				generator.Emit(OpCodes.Ldarg_0);
+				generator.Emit(OpCodes.Ldarg_1, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+				generator.Emit(OpCodes.Ldarg_2);
+				generator.Emit(OpCodes.Add);
+				generator.Emit(OpCodes.Ldarg_3);				
+				generator.Emit(OpCodes.Call, typeof(Deltix.Containers.MemoryUtils).GetMethod("Copy", methodArgs1));
+				generator.Emit(OpCodes.Ret);
+				
+				myDelegateCopy2 = (MyDelegate2)getPointer.CreateDelegate(typeof(MyDelegate2));
+			}
+	
+			myDelegateCopy2(source, destination, destinationOffset, size);
+		}
+
+		private unsafe void CopyInternal(Struct[] source, int sourceOffset, Struct[] destination, int destinationOffset, int size)
+		{
+			if (myDelegateMove3 == null)
+			{
+				Type[] methodArgs = { typeof(Struct[]), typeof(int), typeof(Struct[]), typeof(int), typeof(int) };
+				Type[] methodArgs1 = { typeof(IntPtr), typeof(IntPtr), typeof(int) };
+
+				DynamicMethod getPointer = new DynamicMethod("Copy3", typeof(void), methodArgs, Assembly.GetExecutingAssembly().ManifestModule);
+				ILGenerator generator = getPointer.GetILGenerator();
+				LocalBuilder t = generator.DeclareLocal(typeof(IntPtr), true);
+				
+				generator.Emit(OpCodes.Ldarg_0, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+				generator.Emit(OpCodes.Ldarg_1);
+				generator.Emit(OpCodes.Add);
+				
+				generator.Emit(OpCodes.Ldarg_2, t);
+				generator.Emit(OpCodes.Ldc_I4_0);
+				generator.Emit(OpCodes.Ldelema, typeof(Struct));
+				generator.Emit(OpCodes.Conv_I);
+				generator.Emit(OpCodes.Ldarg_3);
+				generator.Emit(OpCodes.Add);
+				
+				generator.Emit(OpCodes.Ldarg_S, 4);
+				generator.Emit(OpCodes.Call, typeof(Deltix.Containers.MemoryUtils).GetMethod("Copy", methodArgs1));
+				generator.Emit(OpCodes.Ret);
+				
+				myDelegateCopy3 = (MyDelegate3)getPointer.CreateDelegate(typeof(MyDelegate3));
+			
+			}
+	
+			myDelegateCopy3(source, sourceOffset, destination, destinationOffset, size);
+		}
+
+
+			
+		/// <summary>
+		/// Move block of memory to another with no intersection
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinationArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe void Copy(Struct[] source, int startSourceOffset, Struct[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			CopyInternal(source, startSourceOffset, destination, startDestinationOffset, size);
+		}
+		/// <summary>
+		/// Move block of memory to another from left.
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinationArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe void MoveLeft(Struct[] source, int startSourceOffset, Struct[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			MoveLeftInternal(source, startSourceOffset, destination, startDestinationOffset, size);
+		}
+		/// <summary>
+		/// Move block of memory to another from right.
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinationArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe void MoveRight(Struct[] source, int startSourceOffset, Struct[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			MoveRightInternal(source, startSourceOffset, destination, startDestinationOffset, size);
+		}
+		/// <summary>
+		/// Move block of memory to another.
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinationArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe void Move(Struct[] source, int startSourceOffset, Struct[] destination, int startDestinationOffset,  int size) 
+		{
+			if (size == 0) return;
+			MoveInternal(source, startSourceOffset, destination, startDestinationOffset, size);
+		}
+		<#
+		foreach (String type in types)
+		{
+		#>
+		/// <summary>
+		/// Move block of memory to another with no intersection
+		/// </summary>
+		/// <param name="source">The memory pointer to copy from.</param>
+		/// <param name="destination">The array to copy to.</param>
+		/// <param name="startDestinationOffset">The zero-based Offset in the destination array where copying should start.</param>
+		/// <param name="size">The size in bytes to copy.</param>                             
+		public unsafe void Copy(<#=type#> source, Struct[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			CopyInternal((IntPtr)source, destination, startDestinationOffset, size);
+		}
+		/// <summary>
+		/// Move block of memory to another from left.
+		/// </summary>
+		/// <param name="source">The memory pointer to copy from.</param>
+		/// <param name="destination">The array to copy to.</param>
+		/// <param name="startDestinationOffset">The zero-based Offset in the destination array where copying should start.</param>
+		/// <param name="size">The size in bytes to copy.</param>   
+		public unsafe void MoveLeft(<#=type#> source, Struct[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			MoveLeftInternal((IntPtr)source, destination, startDestinationOffset, size);
+		
+		}
+		/// <summary>
+		/// Move block of memory to another from right.
+		/// </summary>
+		/// <param name="source">The memory pointer to copy from.</param>
+		/// <param name="destination">The array to copy to.</param>
+		/// <param name="startDestinationOffset">The zero-based Offset in the destination array where copying should start.</param>
+		/// <param name="size">The size in bytes to copy.</param>   
+		public unsafe void MoveRight(<#=type#> source, Struct[] destination, int startDestinationOffset,  int size) 
+		{
+			if (size == 0) return;
+			MoveRightInternal((IntPtr)source, destination, startDestinationOffset, size);
+		
+		}
+		/// <summary>
+		/// Move block of memory to another.
+		/// </summary>
+		/// <param name="source">The memory pointer to copy from.</param>
+		/// <param name="destination">The array to copy to.</param>
+		/// <param name="startDestinationOffset">The zero-based Offset in the destination array where copying should start.</param>
+		/// <param name="size">The size in bytes to copy.</param>   
+		public unsafe void Move(<#=type#> source, Struct[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			MoveInternal((IntPtr)source, destination, startDestinationOffset, size);
+		
+		}
+		/// <summary>
+		/// Move block of memory to another with no intersection
+		/// </summary>
+		/// <param name="source">The one-dimensional array to copy from.</param>
+		/// <param name="startSourceOffset">The zero-based Offset in the source array where copying should start.</param>
+		/// <param name="destination">The memory pointer to copy to.</param>
+		/// <param name="size">The size of array elements to copy in bytes.</param>
+		public unsafe void Copy(Struct[] source, int startSourceOffset, <#=type#> destination, int size) 
+		{
+			if (size == 0) return;
+			CopyInternal(source, startSourceOffset, (IntPtr)destination, size);
+		
+		}
+		/// <summary>
+		/// Move block of memory to another from left.
+		/// </summary>
+		/// <param name="source">The one-dimensional array to copy from.</param>
+		/// <param name="startSourceOffset">The zero-based Offset in the source array where copying should start.</param>
+		/// <param name="destination">The memory pointer to copy to.</param>
+		/// <param name="size">The size of array elements to copy in bytes.</param>
+		public unsafe void MoveLeft(Struct[] source, int startSourceOffset, <#=type#> destination, int size) 
+		{
+			if (size == 0) return;	
+			MoveLeftInternal(source, startSourceOffset, (IntPtr)destination, size);
+		}
+		/// <summary>
+		/// Move block of memory to another from right.
+		/// </summary>
+		/// <param name="source">The one-dimensional array to copy from.</param>
+		/// <param name="startSourceOffset">The zero-based Offset in the source array where copying should start.</param>
+		/// <param name="destination">The memory pointer to copy to.</param>
+		/// <param name="size">The size of array elements to copy in bytes.</param>
+		public unsafe void MoveRight(Struct[] source, int startSourceOffset, <#=type#> destination, int size) 
+		{
+			if (size == 0) return;
+			MoveRightInternal(source, startSourceOffset, (IntPtr)destination, size);
+		}
+		/// <summary>
+		/// Move block of memory to another.
+		/// </summary>
+		/// <param name="source">The one-dimensional array to copy from.</param>
+		/// <param name="startSourceOffset">The zero-based Offset in the source array where copying should start.</param>
+		/// <param name="destination">The memory pointer to copy to.</param>
+		/// <param name="size">The size of array elements to copy in bytes.</param>
+		public unsafe void Move(Struct[] source, int startSourceOffset, <#=type#> destination,  int size) 
+		{
+			if (size == 0) return;
+			MoveInternal(source, startSourceOffset, (IntPtr)destination, size);
+		}	
+		<#
+		}
+		#>
+
+
+
+		<#
+		foreach (String type in types1)
+		{
+		#>
+
+		/// <summary>
+		/// Move block of memory to another with no intersection
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinationArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe void Copy(Struct[] source, int startSourceOffset, <#=type#>[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			fixed (<#=type#>* ptr1 = destination) {
+				byte* ptr = (byte*) ptr1;
+				CopyInternal(source, startSourceOffset, (IntPtr)(ptr + startDestinationOffset), size);
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another from left.
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinationArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe void MoveLeft(Struct[] source, int startSourceOffset, <#=type#>[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			fixed (<#=type#>* ptr1 = destination) {
+				byte* ptr = (byte*) ptr1;
+				MoveLeftInternal(source, startSourceOffset, (IntPtr)(ptr + startDestinationOffset), size);
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another from right.
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinationArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe void MoveRight(Struct[] source, int startSourceOffset, <#=type#>[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			fixed (<#=type#>* ptr1 = destination) {
+				byte* ptr = (byte*) ptr1;
+				MoveRightInternal(source, startSourceOffset, (IntPtr)(ptr + startDestinationOffset), size);
+			}	
+		}
+		/// <summary>
+		/// Move block of memory to another.
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinationArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe void Move(Struct[] source, int startSourceOffset, <#=type#>[] destination, int startDestinationOffset,  int size) 
+		{
+			if (size == 0) return;
+			fixed (<#=type#>* ptr1 = destination) {
+				byte* ptr = (byte*) ptr1;
+				MoveInternal(source, startSourceOffset, (IntPtr)(ptr + startDestinationOffset), size);
+			}	
+		}
+
+
+		/// <summary>
+		/// Move block of memory to another with no intersection
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinationArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe void Copy(<#=type#>[] source, int startSourceOffset, Struct[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			fixed (<#=type#>* ptr1 = source) {
+				byte* ptr = (byte*) ptr1;	
+				CopyInternal((IntPtr)(ptr + startSourceOffset), destination, startDestinationOffset, size);
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another from left.
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinationArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe void MoveLeft(<#=type#>[] source, int startSourceOffset, Struct[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			fixed (<#=type#>* ptr1 = source) {
+				byte* ptr = (byte*) ptr1;			
+				MoveLeftInternal((IntPtr)(ptr + startSourceOffset), destination, startDestinationOffset, size);
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another from right.
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinationArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe void MoveRight(<#=type#>[] source, int startSourceOffset, Struct[] destination, int startDestinationOffset, int size) 
+		{
+			if (size == 0) return;
+			fixed (<#=type#>* ptr1 = source) {
+				byte* ptr = (byte*) ptr1;			
+				MoveRightInternal((IntPtr)(ptr + startSourceOffset), destination, startDestinationOffset, size);
+			}
+		}
+		/// <summary>
+		/// Move block of memory to another.
+		/// </summary>
+		/// <param name="source">The Array that contains the data to copy.</param>
+		/// <param name="startSourceOffset">A 32-bit integer that represents the offset in bytes in the sourceArray at which copying begins.</param>
+		/// <param name="destination">The Array that receives the data.</param>
+		/// <param name="startDestinationOffset">A 32-bit integer that represents the offset in bytes in the destinationArray at which storing begins.</param>
+		/// <param name="size">A 32-bit integer that represents the size in bytes of elements to copy.</param>
+		public unsafe void Move(<#=type#>[] source, int startSourceOffset, Struct[] destination, int startDestinationOffset,  int size) 
+		{
+			if (size == 0) return;
+			fixed (<#=type#>* ptr1 = source) {
+				byte* ptr = (byte*) ptr1;			
+				MoveInternal((IntPtr)(ptr + startSourceOffset), destination, startDestinationOffset, size);
+			}
+		}
+		
+		<#
+		}
+		#>
+	}
+}

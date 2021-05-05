@@ -1,0 +1,96 @@
+package com.epam.deltix.containers.generated;
+
+
+import java.util.Objects;
+
+public class TupleObj${value}<T1## 
+#if($value > 1)## 
+#foreach ($index in [2..$value]) 
+, T${index}##
+#end 
+#end> implements TupleObj${value}ReadOnly<T1## 
+#if($value > 1)## 
+#foreach ($index in [2..$value]) 
+, T${index}##
+#end
+#end> 
+ {
+
+  public TupleObj${value}() {
+  
+  }
+  
+
+  public TupleObj${value}(T1 element1 #foreach ($i in [2..$value])
+,T${i} element${i}
+#end) {
+#foreach ($index in [1..$value])
+this.element${index} = element${index};
+#end
+} 
+ 
+ 
+ #foreach ($i in [1..$value]) 
+  T${i} element${i};
+  
+   
+  @Override
+  public T${i} getElement${i}() {
+      return element${i};
+  }
+ 
+
+  public TupleObj${value}<T1## 
+#if($value > 1)## 
+#foreach ($index in [2..$value]) 
+, T${index}##
+#end 
+#end> setElement${i}(T${i} element${i}) {
+     this.element${i} = element${i};
+     return this;
+  }
+  #end
+
+  
+    @Override
+    public void copyTo(TupleObj${value} destination) {
+       #foreach ($index in [1..$value])
+destination.element${index} = element${index};
+#end
+    }
+
+    @Override
+    public TupleObj${value} clone() {
+        TupleObj${value} destination = new TupleObj${value}();
+        copyTo(destination);
+    	return destination;
+    }
+
+    @Override
+    public boolean equals(Object second) {
+      if (!(second instanceof TupleObj${value}ReadOnly)) return false;
+      TupleObj${value}ReadOnly obj = (TupleObj${value}ReadOnly) second;
+      if (obj == null) return false;
+#foreach ($i in [1..$value]) 
+      if (element${i} == null && obj.getElement${i}() != null) return false;
+      if (element${i} != null && obj.getElement${i}() == null) return false;
+      if (element${i} != null && element${i}.equals(obj.getElement${i}()) == false) return false; 
+      #end
+      return true;
+    }
+
+
+    @Override
+    public int hashCode() {
+      int hash = 0;
+#foreach ($i in [1..$value]) 
+      if (element${i} == null) hash *= 31; else {
+          hash = hash * 31 + element${i}.hashCode();
+      }
+      #end
+      return hash;
+    }
+
+
+
+}

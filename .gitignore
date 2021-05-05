@@ -1,0 +1,10 @@
+.vs/
+.gradle/
+.idea/
+.vscode/
+*.suo
+*.user
+*.nupkg
+**/obj/
+**/bin/
+**/build/

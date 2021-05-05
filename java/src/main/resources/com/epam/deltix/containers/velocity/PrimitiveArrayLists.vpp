@@ -1,0 +1,316 @@
+package com.epam.deltix.containers.generated;
+
+#if (${name} == "Decimal")
+import com.epam.deltix.dfp.Decimal64;
+#elseif (${name} == "DecimalLong")
+import com.epam.deltix.dfp.Decimal64Utils;
+#end
+
+
+import java.util.*;
+
+public class ${name}ArrayList {
+        private static final int DEFAULT_CAPACITY = 10;
+        private ${type}[] elementData;
+        private int size;
+        private double growFactor = DEFAULT_GROW_FACTOR;
+
+        private static final ${type}[] EMPTY_ELEMENTDATA = {};
+        private static final ${type}[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
+        private static final double DEFAULT_GROW_FACTOR = 1.5;
+
+        public ${name}ArrayList(int initialCapacity) {
+            if (initialCapacity > 0) {
+                this.elementData = new ${type}[initialCapacity];
+            } else if (initialCapacity == 0) {
+                this.elementData = EMPTY_ELEMENTDATA;
+            } else {
+                throw new IllegalArgumentException("Illegal Capacity: "+
+                        initialCapacity);
+            }
+        }
+
+        public ${name}ArrayList() {
+            this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
+        }
+
+        private ${name}ArrayList(${name}ArrayList c) {
+            size = c.size();
+            if (c.elementData.length != 0) {
+                elementData = Arrays.copyOf(c.elementData, size);
+            } else {
+                this.elementData = EMPTY_ELEMENTDATA;
+            }
+        }
+
+        public void setGrowFactor(double growFactor) {
+            if (Double.isNaN(growFactor) || Double.isInfinite(growFactor))
+                throw new IllegalArgumentException("Abnormal growFactor");
+            if (growFactor <= 1)
+                throw new IllegalArgumentException("Grow factor cannot be less or equal to 1");
+
+            this.growFactor = growFactor;
+        }
+
+        public double getGrowFactor() {
+            return this.growFactor;
+        }
+
+        public boolean add(${type} e) {
+            ensureCapacity(size + 1);
+            elementData[size++] = e;
+            return true;
+        }
+
+
+        public void add(int index, ${type} element) {
+            rangeCheck(index);
+
+            ensureCapacity(size + 1);
+            System.arraycopy(elementData, index, elementData, index + 1,
+                    size - index);
+            elementData[index] = element;
+            size++;
+        }
+
+        private void ensureCapacity(int minCapacity) {
+            if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) minCapacity = Math.max(DEFAULT_CAPACITY, minCapacity);
+
+            if (minCapacity - elementData.length > 0)
+                grow(minCapacity);
+        }
+
+        private void grow(int minCapacity) {
+            int oldCapacity = elementData.length;
+            int newCapacity = (int)(growFactor * oldCapacity) + 1;
+            if (newCapacity - minCapacity < 0)
+                newCapacity = minCapacity;
+            elementData = Arrays.copyOf(elementData, newCapacity);
+        }
+
+        public void shrinkToFit() {
+            int newCapacity = size;
+            elementData = Arrays.copyOf(elementData, newCapacity);
+        }
+
+        private void rangeCheck(int index) {
+            if (index > size || index < 0)
+                throw new IndexOutOfBoundsException("Index: "+index+", Size: "+size);
+        }
+
+        public boolean remove(${type} o) {
+            for (int index = 0; index < size; index++)
+            #if (${name} == "DecimalLong")
+    if(Decimal64Utils.equals(o, elementData[index]))
+            #elseif (${name} == "Decimal")
+    if (o.equals(elementData[index]))
+            #else
+    if (o == elementData[index])
+            #end
+    {
+                    fastRemove(index);
+                    return true;
+                }
+
+            return false;
+        }
+
+        private void fastRemove(int index) {
+            int numMoved = size - index - 1;
+            if (numMoved > 0)
+                System.arraycopy(elementData, index+1, elementData, index,
+                        numMoved);
+            size--;
+        }
+
+        public int size() {
+            return size;
+        }
+
+        public int getCapacity() {
+            return elementData.length;
+        }
+
+        public boolean isEmpty() {
+            return size == 0;
+        }
+
+        public boolean contains(${type} o) {
+            return indexOf(o) >= 0;
+        }
+
+        public int indexOf(${type} o) {
+
+            for (int i = 0; i < size; i++)
+            #if (${name} == "DecimalLong")
+    if(Decimal64Utils.equals(o, elementData[i]))
+            #elseif (${name} == "Decimal")
+    if (o.equals(elementData[i]))
+            #else
+    if (o == elementData[i])
+            #end
+        return i;
+
+            return -1;
+        }
+
+        public int lastIndexOf(${type} o) {
+
+            for (int i = size-1; i >= 0; i--)
+            #if (${name} == "DecimalLong")
+    if(Decimal64Utils.equals(o, elementData[i]))
+            #elseif (${name} == "Decimal")
+    if (o.equals(elementData[i]))
+            #else
+    if (o == elementData[i])
+            #end
+        return i;
+
+            return -1;
+        }
+
+        public ${name}ArrayList clone() {
+            ${name}ArrayList v = new ${name}ArrayList(this);
+            return v;
+        }
+
+        public ${type}[] toArray() {
+            return Arrays.copyOf(elementData, size);
+        }
+
+        public ${type} get(int index) {
+            rangeCheck(index);
+            return (${type}) elementData[index];
+        }
+
+        public void clear() {
+            size = 0;
+        }
+
+        public boolean equals(${name}ArrayList o) {
+            if (o == this)
+                return true;
+
+            if(o.size != size)
+             return false;
+
+            for(int i = 0; i < size; i++)
+            {
+            #if (${name} == "DecimalLong")
+    if(!Decimal64Utils.equals(o.elementData[i], elementData[i]))
+            #elseif (${name} == "Decimal")
+    if (!o.elementData[i].equals(elementData[i]))
+            #else
+    if (o.elementData[i] != elementData[i])
+            #end
+        return false;
+            }
+            return true;
+        }
+
+        #if (${name} == "DecimalLong")
+        public Iterator<Long> iterator() {
+            return Iterator(0);
+        }
+
+        public Iterator<Long> Iterator(final int index) {
+            rangeCheck(index);
+
+            return new Iterator<Long>() {
+                int current = index;
+
+                public boolean hasNext() {
+                    return current != size - 1;
+                }
+
+                public Long next() {
+                    current++;
+                    return elementData[current];
+                }
+
+                public boolean hasPrevious() {
+                    return current != 0;
+                }
+
+                public Long previous() {
+                    current--;
+                    return elementData[current];
+                }
+
+                public int nextIndex() {
+                    return current + 1;
+                }
+
+                public int previousIndex() {
+                    return current - 1;
+                }
+
+                public void remove() {
+                    removeByIndex(current);
+                }
+            };
+        }
+        #else
+public Iterator<${type_Object}> iterator() {
+            return Iterator(0);
+        }
+
+        public Iterator<${type_Object}> Iterator(final int index) {
+            rangeCheck(index);
+
+            return new Iterator<${type_Object}>() {
+                int current = index;
+
+                public boolean hasNext() {
+                    return current != size - 1;
+                }
+
+                public ${type_Object} next() {
+                    current++;
+                    return elementData[current];
+                }
+
+                public boolean hasPrevious() {
+                    return current != 0;
+                }
+
+                public ${type_Object} previous() {
+                    current--;
+                    return elementData[current];
+                }
+
+                public int nextIndex() {
+                    return current + 1;
+                }
+
+                public int previousIndex() {
+                    return current - 1;
+                }
+
+                public void remove() {
+                    removeByIndex(current);
+                }
+            };
+        }
+        #end
+
+        public ${type} set(int index, ${type} element) {
+            rangeCheck(index);
+
+            ${type} oldValue = (${type}) elementData[index];
+            elementData[index] = element;
+            return oldValue;
+        }
+
+        public ${type} removeByIndex(int index) {
+            rangeCheck(index);
+            ${type} oldValue = (${type}) elementData[index];
+
+            int numMoved = size - index - 1;
+            if (numMoved > 0)
+                System.arraycopy(elementData, index+1, elementData, index,
+                        numMoved);
+            size--;
+            return oldValue;
+        }
+}

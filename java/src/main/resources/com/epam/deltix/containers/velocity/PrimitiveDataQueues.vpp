@@ -1,0 +1,1509 @@
+package com.epam.deltix.containers.generated;
+import com.epam.deltix.containers.interfaces.BiConsumer;
+
+#if (${name} == "Decimal")
+import com.epam.deltix.dfp.Decimal64;
+#elseif (${name} == "DecimalLong")
+import com.epam.deltix.dfp.${type_Object};
+import com.epam.deltix.dfp.Decimal;
+#end
+
+import javax.naming.OperationNotSupportedException;
+import java.util.ArrayList;
+import java.util.Iterator;
+
+import static java.lang.Math.sqrt;
+
+
+/**
+ * 	Represents a dynamic circled queue, specialized to work with ${type}.
+ * 	Additionally it optionally can calculate simple statistical values.
+ * 	It has four methods of work and it can store elements in sliding window
+ * 	specified by time period or number of elements.
+ *
+ * 	Also it support direct access to element. Using two indexers: by index (int) and by time (long).
+ * 	All method has two versions, with and without time parameter. Please do not use both for the same class instance.
+ * 	Using method with time is mandatory if you want to use time indexer or time period sliding window (AutoDynamic type).
+ * 	You can specify number of listener to do some additional work when queue store or drop element.
+ */
+public class ${name}DataQueue {
+
+    /**
+     * 	SingleElement: Queue store only one single element. (Useful as default method for indicators history storing)
+     * 	ManualControl: Support all typical operations specific to Dequeue. (Useful for some custom work).
+     * 	AutoStatic: Store all elements in sliding window specified by number elements to store. Automatically drop element when it out of the window.
+     * 	AutoDynamic: Store all elements in sliding window specified by time period. Automatically drop element when it out of the window.
+     */
+    public static enum QueueType {
+        SINGLE_ELEMENT,
+        AUTO_STATIC,
+        MANUAL_CONTROL,
+        AUTO_DYNAMIC
+    }
+
+    class StatisticsData
+    {
+        // sum of added elements
+        #if (${name} == "DecimalLong")@Decimal#end
+
+        ${type} sum;
+
+        // sum of absolute values of added elements
+        #if (${name} == "DecimalLong")@Decimal#end
+
+        ${type} abssum;
+
+        // sum of squares of added elements
+        #if (${name} == "DecimalLong")@Decimal#end
+
+        ${type} sqsum;
+
+        public StatisticsData()
+        {
+            init();
+        }
+
+        public void init()
+        {
+            sum = ${type_Object}.ZERO;
+            abssum = ${type_Object}.ZERO;
+            sqsum = ${type_Object}.ZERO;
+        }
+
+        public void set(#if (${name} == "DecimalLong")@Decimal#end ${type} data)
+        {
+            #if (${name} == "DecimalLong")
+sum = data;
+            abssum = Decimal64Utils.abs(data);
+            sqsum = Decimal64Utils.multiply(data, data);
+            #else
+            sum = data;
+            abssum = data.abs();
+            sqsum = data.multiply(data);
+                #end
+
+        }
+
+        public void push(#if (${name} == "DecimalLong")@Decimal#end ${type} data)
+        {
+            #if (${name} == "DecimalLong")
+sum = Decimal64Utils.add(sum, data);
+            abssum = Decimal64Utils.add(abssum, Decimal64Utils.abs(data));
+            sqsum = Decimal64Utils.add(sqsum, Decimal64Utils.multiply(data, data));
+            #else
+            sum = sum.add(data);
+            abssum = abssum.add(data.abs());
+            sqsum = sqsum.add(data.multiply(data));
+                #end
+
+        }
+
+        public void pop(#if (${name} == "DecimalLong")@Decimal#end ${type} data)
+        {
+                #if (${name} == "DecimalLong")
+sum = Decimal64Utils.subtract(sum, data);
+                abssum =  Decimal64Utils.subtract(abssum, Decimal64Utils.abs(data));
+                sqsum = Decimal64Utils.subtract(sqsum, Decimal64Utils.multiply(data, data));
+                #else
+                sum = sum.subtract(data);
+                abssum = abssum.subtract(data.abs());
+                sqsum = sqsum.subtract(data.multiply(data));
+                #end
+
+        }
+    }
+
+    private StatisticsData stat;
+    private int first, size;
+    private long period;
+    // This flag is set if and only if queue calculate statistics
+    private boolean calcStatistics = false;
+    private boolean needTime;
+    private QueueType queueType;
+
+    private long[] queueDates;
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    private ${type}[] queueBuffer;
+
+    // Default Time, which will be assumed as default date value.
+    public static final long DEFAULT_TIME = Long.MIN_VALUE;
+    // Default value, which will be returned for invalid request or request for empty queue.
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public static final ${type} DEFAULT_VALUE = ${type_Object}.MIN_VALUE;
+
+    // In case when we use single element, we use this two fields instead of allocating arrays
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    private ${type} previousElement = ${type_Object}.ZERO;
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    private ${type} singleElement = ${type_Object}.ZERO;
+
+    private long previousElementDate = DEFAULT_TIME;
+    private long singleElementDate = DEFAULT_TIME;
+
+
+    private ArrayList<BiConsumer<#if (${name} == "DecimalLong")Long#else${type_Object}#end, Long>> onPush = new ArrayList<>();
+    private ArrayList<BiConsumer<#if (${name} == "DecimalLong")Long#else${type_Object}#end, Long>> onPop = new ArrayList<>();
+
+
+    /**
+     * Add listener on push events.
+     * @param consumer Listener.
+     */
+    public void addOnPushListener(BiConsumer<#if (${name} == "DecimalLong")Long#else${type_Object}#end, Long> consumer)
+    {
+        if (onPush != null)
+        {
+            onPush.add(consumer);
+        }
+    }
+
+    /**
+     * Add listener on pop events.
+     * @param consumer Listener.
+     */
+    public void addOnPopListener(BiConsumer<#if (${name} == "DecimalLong")Long#else${type_Object}#end, Long> consumer)
+    {
+        if (onPop != null)
+        {
+            onPop.add(consumer);
+        }
+    }
+
+    /**
+     * Remove listener on push events.
+     * @param consumer Listener.
+     */
+    public void removeOnPushListener(BiConsumer<#if (${name} == "DecimalLong")Long#else${type_Object}#end, Long> consumer)
+    {
+        if (onPush != null)
+        {
+            onPush.remove(consumer);
+        }
+    }
+
+    /**
+     * Remove listener on pop events.
+     * @param consumer Listener.
+     */
+    public void removeOnPopListener(BiConsumer<#if (${name} == "DecimalLong")Long#else${type_Object}#end, Long> consumer)
+    {
+        if (onPop != null)
+        {
+            onPop.remove(consumer);
+        }
+    }
+
+    private void callOnPushListeners(#if (${name} == "DecimalLong")@Decimal#end ${type} data, long time) {
+        for (int i = 0; i < onPush.size(); ++i) {
+            BiConsumer<#if (${name} == "DecimalLong")Long#else${type_Object}#end, Long> x = onPush.get(i);
+            try {
+                x.accept(data, time);
+            } catch (Throwable e) {
+                continue;
+            }
+        }
+    }
+
+    private void callOnPopListeners(#if (${name} == "DecimalLong")@Decimal#end ${type} data, long time) {
+        for (int i = 0; i < onPop.size(); ++i) {
+            BiConsumer<#if (${name} == "DecimalLong")Long#else${type_Object}#end, Long> x = onPop.get(i);
+            try {
+                x.accept(data, time);
+            } catch (Throwable e) {
+                continue;
+            }
+        }
+    }
+
+    /**
+     * Create new instance of ringed queue with default capacity in ManualControl mode.
+     * @param needTime Queue additionally stores time parameter if True.
+     */
+    public ${name}DataQueue(boolean needTime)
+    {
+        queueBuffer  = new ${type}[10];
+        queueDates = new long[10];
+
+        first = size = 0;
+        queueType = QueueType.MANUAL_CONTROL;
+        this.needTime = needTime;
+    }
+
+    /**
+     * Create new instance of ringed queue with custom capacity
+     * in SingleElement(if capacity == 1) or in AutoStatic mode.
+     * @param capacity Capacity of ringed queue.
+     * @param needTime Queue additionally stores time parameter if True.
+     * @throws IllegalArgumentException if capacity is not positive
+     */
+    public ${name}DataQueue(int capacity, boolean needTime)
+    {
+        if (capacity < 1)
+            throw new IllegalArgumentException("Illegal Capacity: "+ capacity);
+
+        if (capacity == 1)
+            queueType = QueueType.SINGLE_ELEMENT;
+        else {
+            queueType = QueueType.AUTO_STATIC;
+            queueBuffer  = new ${type}[capacity];
+            queueDates = new long[capacity];
+        }
+        first = size = 0;
+        this.needTime = needTime;
+    }
+
+    /**
+     * Create new instance of ringed queue in AutoDynamic mode with default capacity.
+     * @param period Time period of sliding window.
+     * @throws IllegalArgumentException if period is not positive
+     */
+    public ${name}DataQueue(long period)
+    {
+        if (period <= 0)
+            throw new IllegalArgumentException("Illegal Period: "+ period);
+
+        queueType = QueueType.AUTO_DYNAMIC;
+        this.period = period;
+        queueBuffer  = new ${type}[64];
+        queueDates = new long[64];
+        first = size = 0;
+        this.needTime = true;
+    }
+
+    /**
+     * Create new instance of ringed queue in AutoDynamic mode with custom capacity.
+     * @param capacity Capacity of ringed queue.
+     * @param period Time period of sliding window.
+     * @throws IllegalArgumentException if period is not positive
+     */
+    public ${name}DataQueue(int capacity, long period)
+    {
+        if (period <= 0)
+            throw new IllegalArgumentException("Illegal Period: "+ period);
+
+        queueType = QueueType.AUTO_DYNAMIC;
+        this.period = period;
+        queueBuffer  = new ${type}[capacity];
+        queueDates = new long[capacity];
+        first = size = 0;
+        this.needTime = true;
+    }
+
+    /**
+     * Create new instance of ringed queue in ManualControl mode
+     * with default capacity with possibility to calculate statistics.
+     * @param calcStatistics Queue additionally calculates statistics if True.
+     * @param needTime Queue additionally stores time parameter if True.
+     */
+    public ${name}DataQueue(boolean calcStatistics, boolean needTime)
+    {
+        this(needTime);
+        if (calcStatistics) {
+            stat = new StatisticsData();
+            this.calcStatistics = true;
+        }
+    }
+
+    /**
+     * Create new instance of ringed queue with custom capacity
+     * in SingleElement(if capacity == 1) or in AutoStatic mode and
+     * with possibility to calculate statistics.
+     * @param capacity Capacity of ringed queue.
+     * @param calcStatistics Queue additionally calculates statistics if True.
+     * @param needTime Queue additionally stores time parameter if True.
+     */
+    public ${name}DataQueue(int capacity, boolean calcStatistics, boolean needTime)
+    {
+        this(capacity, needTime);
+        if (calcStatistics) {
+            stat = new StatisticsData();
+            this.calcStatistics = true;
+        }
+    }
+
+    /**
+     * Create new instance of ringed queue in AutoDynamic mode with default capacity and
+     * with possibility to calculate statistics.
+     * @param period Time period of sliding window.
+     * @param calcStatistics Queue additionally calculates statistics if True.
+     */
+    public ${name}DataQueue(long period, boolean calcStatistics)
+    {
+        this(period);
+        if (calcStatistics) {
+            stat = new StatisticsData();
+            this.calcStatistics = true;
+        }
+    }
+
+    /**
+     * Create new instance of ringed queue in AutoDynamic mode with custom capacity and
+     * with possibility to calculate statistics.
+     * @param capacity Capacity of ringed queue.
+     * @param period Time period of sliding window.
+     * @param calcStatistics Queue additionally calculates statistics if True.
+     */
+    public ${name}DataQueue(int capacity, long period, boolean calcStatistics)
+    {
+        this(capacity, period);
+        if (calcStatistics) {
+            stat = new StatisticsData();
+            this.calcStatistics = true;
+        }
+    }
+
+    /**
+     * Stores new data element in queue. This method is used for AutoStatic or SingleElement mode.
+     * Do not call it for ManualControl, AutoDynamic mode.
+     * @param data Data element to store.
+     * @throws OperationNotSupportedException if you try to use this method for ManualControl or AutoDynamic mode
+     * or try to use this method after you have already used method with time parameter.
+     */
+    public void put(#if (${name} == "DecimalLong")@Decimal#end ${type} data) throws OperationNotSupportedException {
+        if (queueType == QueueType.MANUAL_CONTROL)
+            throw new OperationNotSupportedException("${name}DataQueue: Use Manual methods putLast, putFirst.");
+
+        if (needTime)
+            throw new OperationNotSupportedException("${name}DataQueue: Do not use this method for AUTO_DYNAMIC, and do not use both with and without Time method for one queue instance.");
+
+        if (queueType == QueueType.SINGLE_ELEMENT)
+        {
+            if (calcStatistics)
+                stat.init();
+
+            if (size > 0)
+            {
+                size = 0;
+                callOnPopListeners(singleElement, DEFAULT_TIME);
+            }
+
+            previousElement = singleElement;
+            singleElement = data;
+            size = 1;
+
+            if (calcStatistics)
+                stat.set(data);
+
+            callOnPushListeners(singleElement, DEFAULT_TIME);
+        }
+        else
+        {
+            if (size == queueBuffer.length) // Need to drop something ?
+            {
+                size--;
+
+                ${type} data_ = queueBuffer[first++];
+                if (first == queueBuffer.length)
+                    first = 0;
+                if (calcStatistics)
+                    stat.pop(data_);
+                callOnPopListeners(data_, DEFAULT_TIME);
+            }
+
+            int index = first + size++;
+            index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+            queueBuffer[index] = data;
+
+            callOnPushListeners(data, DEFAULT_TIME);
+
+            if (calcStatistics)
+                stat.push(data);
+
+        }
+    }
+
+    /**
+     * Store new data element in queue. This method is used for AutoStatic, AutoDynamic or SingleElement mode.
+     * Do not call it for ManualControl mode.
+     * @param data Data element to store.
+     * @param time User defined time. Note: if time is earlier than previous, queue will ignore this call.
+     * @throws OperationNotSupportedException if you try to use this method for ManualControl mode
+     * or try to use this method after you have already used method without time parameter.
+     * @throws IllegalArgumentException if new element has time less then last element.
+     */
+    public void put(#if (${name} == "DecimalLong")@Decimal#end ${type} data, long time) throws OperationNotSupportedException {
+        if (time == DEFAULT_TIME)
+        {
+            put(data);
+            return;
+        }
+        if (queueType == QueueType.MANUAL_CONTROL)
+            throw new OperationNotSupportedException("${name}DataQueue: Use Manual methods putLast, putFirst.");
+
+        if (!needTime)
+            throw new OperationNotSupportedException("${name}DataQueue: Do not use both with and without Time method for one queue instance.");
+
+        if (queueType == QueueType.SINGLE_ELEMENT)
+        {
+            if (calcStatistics)
+                stat.init();
+
+            if (size > 0)
+            {
+                size = 0;
+                callOnPopListeners(singleElement, singleElementDate);
+            }
+
+            size = 1;
+            previousElementDate = singleElementDate;
+            previousElement = singleElement;
+            singleElement = data;
+            singleElementDate = time;
+
+            if (calcStatistics)
+                stat.set(data);
+            callOnPushListeners(singleElement, singleElementDate);
+        }
+        else
+        {
+            int prevIndex = first + size;
+            prevIndex = prevIndex == 0 ? queueDates.length - 1 : prevIndex - 1;
+            prevIndex = prevIndex >= queueBuffer.length ? prevIndex - queueBuffer.length : prevIndex;
+
+            if (size > 0 && time < queueDates[prevIndex])
+                throw new IllegalArgumentException("${name}DataQueue: New element has time less then last element.");
+
+            int index = first + size;
+            index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+            if (queueType == QueueType.AUTO_DYNAMIC)
+            {
+                // Lets delete outdated data
+                // if our queue not empty and if first element have to older date then drop it
+                while (size > 0 && queueDates[first] + period < time)
+                {
+                    size--;
+                    int tempIndex = first++;
+                    if (first == queueDates.length)
+                        first = 0;
+
+                    ${type} data2 = queueBuffer[tempIndex];
+                    if (calcStatistics)
+                        stat.pop(data2);
+
+                    callOnPopListeners(data2, queueDates[tempIndex]);
+                }
+
+                if (size > 0 && first == index)
+                    extend();
+
+                index = first + size;
+                index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+                size++;
+
+                queueBuffer[index] = data;
+                queueDates[index] = time;
+
+                if (calcStatistics)
+                    stat.push(data);
+            }
+            else
+            {
+                if (size == queueBuffer.length) // Need to drop something ?
+                {
+                    size--;
+                    int tempIndex = first++;
+                    if (first == queueBuffer.length)
+                        first = 0;
+
+                    ${type} data_ = queueBuffer[tempIndex];
+                    if (calcStatistics)
+                        stat.pop(data_);
+
+                    callOnPopListeners(data_, queueDates[tempIndex]);
+                }
+
+                size++;
+                queueBuffer[index] = data;
+                queueDates[index] = time;
+
+                if (calcStatistics)
+                    stat.push(data);
+
+            }
+        }
+        callOnPushListeners(data, time);
+    }
+
+    /**
+     * Stores new data element on last position in queue. This method is used for manual queue.
+     * Do not call it for SingleElement, AutoDynamic or AutoStatic mode.
+     * @param data Data element to store.
+     * @param time User defined time. Note: if time is earlier than previous, queue will ignore this call.
+     * @throws OperationNotSupportedException if you try to use this method for non ManualControl mode
+     * or try to use this method after you have already used method without time parameter.
+     * @throws IllegalArgumentException if new element has time less then last element.
+     */
+    public void putLast(#if (${name} == "DecimalLong")@Decimal#end ${type} data, long time) throws OperationNotSupportedException {
+        if (time == DEFAULT_TIME) {
+            putLast(data);
+            return;
+        }
+
+        if (queueType != QueueType.MANUAL_CONTROL)
+            throw new OperationNotSupportedException("${name}DataQueue:  Use Auto method put.");
+
+        if (!needTime)
+            throw new OperationNotSupportedException("${name}DataQueue: Do not use both with and without Time method for one queue instance.");
+
+        int index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+        if (size > 0 && time < queueDates[index == 0 ? queueBuffer.length - 1 : index - 1])
+            throw new IllegalArgumentException("${name}DataQueue: New element has time less then last element.");
+
+        if (size > 0 && first == index)
+            extend();
+
+        index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+        size++;
+        queueBuffer[index] = data;
+        queueDates[index] = time;
+
+        callOnPushListeners(data, time);
+
+        if (calcStatistics)
+            stat.push(data);
+    }
+
+    /**
+     * Stores new data element on last position in queue. This method is used for manual queue.
+     * Do not call it for SingleElement, AutoDynamic or AutoStatic mode.
+     * @param data Data element to store.
+     * @throws OperationNotSupportedException if you try to use this method for non ManualControl mode
+     * or try to use this method after you have already used method with time parameter.
+     */
+    public void putLast(#if (${name} == "DecimalLong")@Decimal#end ${type} data) throws OperationNotSupportedException {
+        if (queueType != QueueType.MANUAL_CONTROL)
+            throw new OperationNotSupportedException("${name}DataQueue:  Use Auto method put.");
+
+        if (needTime)
+            throw new OperationNotSupportedException("${name}DataQueue: Do not use both with and without Time method for one queue instance.");
+
+        int index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+        if (size > 0 && first == index)
+            extend();
+
+        index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+        size++;
+        queueBuffer[index] = data;
+
+        callOnPushListeners(data, DEFAULT_TIME);
+
+        if (calcStatistics)
+            stat.push(data);
+    }
+
+    /**
+     * Stores new data element on first position in queue. This method is used for manual queue.
+     * Do not call it for SingleElement, AutoDynamic or AutoStatic mode.
+     * @param data Data element to store.
+     * @param time User defined time. Note: if first time is earlier than previous, queue will ignore this call.
+     * @throws OperationNotSupportedException if you try to use this method for non ManualControl mode
+     * or try to use this method after you have already used method without time parameter.
+     * @throws IllegalArgumentException if new element has time more then first element.
+     */
+    public void putFirst(#if (${name} == "DecimalLong")@Decimal#end ${type} data, long time) throws OperationNotSupportedException {
+        if (time == DEFAULT_TIME) {
+            putFirst(data);
+            return;
+        }
+
+        if (queueType != QueueType.MANUAL_CONTROL)
+            throw new OperationNotSupportedException("${name}DataQueue:  Use Auto method Put.");
+
+        if (!needTime)
+            throw new OperationNotSupportedException("${name}DataQueue: Do not use both with and without Time method for one queue instance.");
+
+        if (size > 0 && time > queueDates[first])
+            throw new IllegalArgumentException("${name}DataQueue: New element has time more then first element.");
+
+        int index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+        if (size > 0 && first == index)
+            extend();
+
+        first = first == 0 ? queueBuffer.length - 1 : first - 1;
+
+        queueBuffer[first] = data;
+        queueDates[first] = time;
+        size++;
+
+        callOnPushListeners(data, time);
+
+        if (calcStatistics)
+            stat.push(data);
+    }
+
+    /**
+     * Stores new data element on first position in queue. This method is used for manual queue.
+     * Do not call it for SingleElement, AutoDynamic or AutoStatic mode.
+     * @param data Data element to store.
+     * @throws OperationNotSupportedException if you try to use this method for non ManualControl mode
+     * or try to use this method after you have already used method with time parameter.
+     */
+    public void putFirst(#if (${name} == "DecimalLong")@Decimal#end ${type} data) throws OperationNotSupportedException {
+        if (queueType != QueueType.MANUAL_CONTROL)
+            throw new OperationNotSupportedException("${name}DataQueue:  Use Auto method put.");
+
+        if (needTime)
+            throw new OperationNotSupportedException("${name}DataQueue: Do not use both with and without Time method for one queue instance.");
+
+        int index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+        if (size > 0 && first == index)
+            extend();
+
+        first = first == 0 ? queueBuffer.length - 1 : first - 1;
+
+        queueBuffer[first] = data;
+        size++;
+
+        callOnPushListeners(data, DEFAULT_TIME);
+
+        if (calcStatistics)
+            stat.push(data);
+    }
+
+    /**
+     * Removes data element from first position in queue. This method is used for manual queue.
+     * Do not call it for SingleElement, AutoDynamic or AutoStatic mode.
+     * @throws OperationNotSupportedException if you try to use this method for non ManualControl mode
+     * or try to use this method before adding at least one element.
+     */
+    public void removeFirst() throws OperationNotSupportedException {
+        if (queueType != QueueType.MANUAL_CONTROL)
+            throw new OperationNotSupportedException("${name}DataQueue: Do not call this method for non ManualControl queue.");
+        if (size == 0)
+            throw new OperationNotSupportedException("${name}DataQueue: Queue is not initialized. It seems that you hasn't put anything to it.");
+
+        size--;
+        int tempIndex = first++;
+        if (first == queueBuffer.length)
+            first = 0;
+
+        ${type} data = queueBuffer[tempIndex];
+        if (calcStatistics)
+            stat.pop(data);
+
+        callOnPopListeners(data, needTime ? queueDates[tempIndex] : DEFAULT_TIME);
+    }
+
+    /**
+     * Removes data element from last position in queue. This method is used for manual queue.
+     * Do not call it for SingleElement, AutoDynamic or AutoStatic mode.
+     * @throws OperationNotSupportedException if you try to use this method for non ManualControl mode
+     * or try to use this method before adding at least one element.
+     */
+    public void removeLast() throws OperationNotSupportedException {
+        if (queueType != QueueType.MANUAL_CONTROL)
+            throw new OperationNotSupportedException("${name}DataQueue: Do not call this method for non ManualControl queue.");
+        if (size == 0)
+            throw new OperationNotSupportedException("${name}DataQueue: Queue is not initialized. It seems that you hadn't put anything to it.");
+
+        int index = first + --size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+        if (index < 0)
+            index = queueBuffer.length - 1;
+
+        ${type} data = queueBuffer[index];
+        if (calcStatistics)
+            stat.pop(data);
+
+        callOnPopListeners(data, needTime ? queueDates[index] : DEFAULT_TIME);
+    }
+
+    /**
+     *
+     * @param step Steps ago.
+     * @return Element which was stored "step" steps ago.
+     * @throws IndexOutOfBoundsException if step is greater or equal than size of queue.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} getPointsAgo(int step) throws OperationNotSupportedException {
+
+        if (queueType == QueueType.SINGLE_ELEMENT)
+        {
+            if (step == 0)
+                return singleElement;
+            if (step == 1)
+                return previousElement;
+            throw new IndexOutOfBoundsException("${name}DataQueue: Do not use this step for single element queue.");
+        }
+
+        int index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+        if (step < 0 || step >= size)
+            throw new IndexOutOfBoundsException();
+
+        step = (index - 1) - step;
+        if (step < 0)
+            step += queueBuffer.length;
+
+        return queueBuffer[step];
+    }
+
+    /**
+     *  Return time associated with specified point.
+     * @param step Steps ago.
+     * @return Time which was stored with element "step" steps ago.
+     * @throws IndexOutOfBoundsException if step is greater or equal than size of queue.
+     * @throws OperationNotSupportedException if you try to use this method after you have already
+     * specified queue not to store time.
+     */
+    public long getTimeByIndexAgo(int step) throws OperationNotSupportedException {
+        if (!needTime)
+            throw new OperationNotSupportedException("${name}DataQueue: It seems that you didn't specify Time for data elements, so this call is incorrect.");
+
+        if (queueType == QueueType.SINGLE_ELEMENT)
+        {
+            if (step == 0)
+                return singleElementDate;
+            if (step == 1)
+                return previousElementDate;
+            throw new IndexOutOfBoundsException("${name}DataQueue: Do not use this method for single element queue.");
+        }
+
+        if (step < 0 || step >= size)
+            return DEFAULT_TIME;
+
+        int index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+        step = (index - 1) - step;
+        if (step < 0)
+            step += queueBuffer.length;
+
+        return queueDates[step];
+    }
+
+    private int leftBinarySearch(long time) {
+        int index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+        // We use binary search for it, O( log N ) complexity
+        // Define borders
+        int left = first; // starting from the first
+
+        int right = index == 0 ? queueBuffer.length - 1 : index - 1; // to cursor - 1, last valid element
+        int center = 0;
+
+        if (left > right) // normalize
+            right += queueBuffer.length;
+
+        while (right - left > 1) // Binary search
+        {
+            center = (left + right) >> 1;
+
+            if (queueDates[(center >= queueBuffer.length ? center - queueBuffer.length : center)] > time)
+                right = center;
+            else
+                left = center;
+        }
+        left = left >= queueBuffer.length ? left - queueBuffer.length : left;
+        return left;
+    }
+
+    /**
+     * Get offset index of element by element time(offset index begins from end).
+     * If there is no element with such time, it returns index of the latest element with time less than specified.
+     * If it can't find valid index, it returns -1.
+     * @param time Element time.
+     * @return Zero-based index of desired point starting from latest one.
+     * @throws OperationNotSupportedException if you try to use this method for SingleElement mode or
+     * if you try to use this method after you have already specified queue not to store time.
+     */
+    public int getIndexByTime(long time) throws OperationNotSupportedException {
+        if (queueType == QueueType.SINGLE_ELEMENT)
+            throw new OperationNotSupportedException("${name}DataQueue: Do not use this method for single element queue.");
+        if (!needTime)
+            throw new OperationNotSupportedException("${name}DataQueue: It seems that you didn't specify Time for data elements, so this call is incorrect.");
+
+        if (queueDates[first] > time) // if our first valid element not older enough
+            return -1;
+
+        if (size == 0) // if queue is empty there is nothing to search
+            return -1;
+
+
+        int left = leftBinarySearch(time);
+        int right = left + 1;
+        int index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+        // it returns historically latest element with less or equal Time
+        if (right < queueDates.length && queueDates[right] <= time)
+            return (index - right - 1 + queueBuffer.length) % queueBuffer.length;
+        else
+            return (index - left - 1 + queueBuffer.length) % queueBuffer.length;
+    }
+
+    /**
+     * Get element by element time.
+     * If there is no element with such time, it returns the latest element with time less than specified.
+     * If it can't find valid index, it returns -1.
+     * @param time Element time.
+     * @return The closest element to desired time.
+     * @throws OperationNotSupportedException if you try to use this method for SingleElement mode or
+     * if you try to use this method after you have already specified queue not to store time.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} getByTime(long time) throws OperationNotSupportedException {
+        if (queueType == QueueType.SINGLE_ELEMENT)
+            throw new OperationNotSupportedException("${name}DataQueue: Do not use this method for single element queue.");
+        if (!needTime)
+            throw new OperationNotSupportedException("${name}DataQueue: It seems that you didn't specify Time for data elements, so this call is incorrect.");
+
+        if (queueDates[first] > time) // if our very first valid element not older enough
+            return DEFAULT_VALUE;
+        if (size == 0) // if queue is empty there is nothing to search
+            return DEFAULT_VALUE;
+
+        int left = leftBinarySearch(time);
+        int right = left + 1;
+
+        if (queueDates[right] <= time)
+            return queueBuffer[right];
+        return queueBuffer[left];
+    }
+
+    /**
+     * Sets element which was stored "step" steps ago.
+     * @param step Steps ago.
+     * @param t Value to set.
+     * @throws IndexOutOfBoundsException if step is greater or equal than size of queue.
+     */
+    public void setPointsAgo(int step, #if (${name} == "DecimalLong")@Decimal#end ${type} t) throws OperationNotSupportedException {
+        if (queueType == QueueType.SINGLE_ELEMENT)
+        {
+            if (step == 0)
+            {
+                callOnPopListeners(singleElement, singleElementDate);
+                singleElement = t;
+
+                if (calcStatistics)
+                    stat.set(t);
+
+                callOnPushListeners(singleElement, singleElementDate);
+                return;
+            }
+            else if (step == 1)
+            {
+                callOnPopListeners(previousElement, previousElementDate);
+                previousElement = t;
+                callOnPushListeners(previousElement, previousElementDate);
+                return;
+            }
+            throw new IndexOutOfBoundsException("${name}DataQueue: Do not use this method for single element queue.");
+        }
+
+        if (step < 0 || step >= size)
+            throw new IndexOutOfBoundsException("${name}DataQueue: Queue does not contain data with specified index.");
+
+        int index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+        step = (index - 1) - step;
+        if (step < 0)
+            step += queueBuffer.length;
+
+        callOnPopListeners(queueBuffer[index], needTime ? queueDates[index] : DEFAULT_TIME);
+
+        if (calcStatistics) {
+            stat.pop(queueBuffer[step]);
+            stat.push(t);
+        }
+
+        queueBuffer[step] = t;
+
+        callOnPushListeners(queueBuffer[step], needTime ? queueDates[step] : DEFAULT_TIME);
+    }
+
+    /**
+     * Sets element with given element time.
+     * If there is no element with such time, it raises exception.
+     * @param time Element time.
+     * @param t Value to set.
+     * @throws OperationNotSupportedException if you try to use this method for SingleElement mode or
+     * if you try to use this method after you have already specified queue not to store time or
+     * if queue is empty.
+     * @throws IllegalArgumentException if element is not found.
+     */
+    public void setByTime(long time, #if (${name} == "DecimalLong")@Decimal#end ${type} t) throws OperationNotSupportedException {
+        if (queueType == QueueType.SINGLE_ELEMENT)
+            throw new OperationNotSupportedException("${name}DataQueue: Do not use this method for single element queue.");
+
+        if (!needTime)
+            throw new OperationNotSupportedException("${name}DataQueue: It seems that you didn't specify Time for data elements, so this call is incorrect.");
+
+        if (queueDates[first] > time)
+            throw new IllegalArgumentException("${name}DataQueue: First valid element is older than specified Time.");
+
+        if (size == 0)
+            throw new OperationNotSupportedException("${name}DataQueue: Queue is empty.");
+
+        int index = leftBinarySearch(time);
+
+        if (queueDates[index] != time)
+            if (queueDates[++index] != time)
+                throw new IllegalArgumentException("${name}DataQueue: There is no element with specified Time.");
+
+        callOnPopListeners(queueBuffer[index], queueDates[index]);
+
+        if (calcStatistics) {
+            stat.pop(queueBuffer[index]);
+            stat.push(t);
+        }
+
+        queueBuffer[index] = t;
+        callOnPushListeners(queueBuffer[index], queueDates[index]);
+    }
+
+
+    private void extend() {
+        ${type}[] newArray = new ${type}[queueBuffer.length << 1];
+
+        System.arraycopy(queueBuffer, first, newArray, 0, queueBuffer.length - first);
+        if (first > 0)
+            System.arraycopy(queueBuffer, 0, newArray, queueBuffer.length - first, first);
+
+        queueBuffer = newArray;
+
+        if (needTime)
+        {
+            long[] newLongArray = new long[queueDates.length << 1];
+
+            System.arraycopy(queueDates, first, newLongArray, 0, queueDates.length - first);
+            if (first > 0)
+                System.arraycopy(queueDates, 0, newLongArray, queueDates.length - first, first);
+            first = 0;
+            queueDates = newLongArray;
+        }
+        first = 0;
+    }
+
+    /**
+     * Copies the elements of the ${name}DataQueue data to a new array.
+     * @return  An array containing copies of the data of the queue.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type}[] toArray() {
+        int count = size;
+
+        if (queueType == QueueType.SINGLE_ELEMENT) {
+            if (count > 0)
+                return new ${type}[] { singleElement };
+            else
+                return new ${type}[0];
+        }
+
+        ${type}[] array = new ${type}[count];
+
+        for (int i = first, j = 0; j < count; i++, j++) {
+            if (i == queueBuffer.length)
+                i = 0;
+
+            array[j] = queueBuffer[i];
+        }
+        return array;
+    }
+
+    /**
+     * Get first element of queue or DefaultValue if queue is empty.
+     * @return First element of queue or default.
+     */
+
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} getFirst()
+    {
+        if (queueType == QueueType.SINGLE_ELEMENT)
+            return singleElement;
+
+        if (size == 0)
+            return DEFAULT_VALUE;
+
+        return queueBuffer[first];
+    }
+
+    /**
+     * Get last element of queue or DefaultValue if queue is empty.
+     * @return Last element of queue or default.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} getLast()
+    {
+        if (queueType == QueueType.SINGLE_ELEMENT)
+            return singleElement;
+
+        if (size == 0)
+            return DEFAULT_VALUE;
+
+        int index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+        index = index == 0 ? queueBuffer.length - 1 : index - 1;
+        return queueBuffer[index];
+    }
+
+    /**
+     * Get first element time of queue or DEFAULT_TIME if queue is empty.
+     * @return First element time of queue or default time.
+     */
+    public long getFirstElementTime() throws OperationNotSupportedException {
+        if (!needTime)
+            throw new OperationNotSupportedException("${name}DataQueue: Time not stored in. Use method put with Time.");
+
+        if (queueType == QueueType.SINGLE_ELEMENT)
+            return singleElementDate;
+
+        if (size == 0)
+            return DEFAULT_TIME;
+
+        return queueDates[first];
+    }
+
+    /**
+     * Get last element time of queue or DEFAULT_TIME if queue is empty.
+     * @return Last element time of queue or default time.
+     */
+    public long getLastElementTime() throws OperationNotSupportedException {
+        if (!needTime)
+            throw new OperationNotSupportedException("${name}DataQueue: Time not stored in. Use method put with Time.");
+
+        if (queueType == QueueType.SINGLE_ELEMENT)
+            return singleElementDate;
+
+        if (size == 0)
+            return DEFAULT_TIME;
+
+        int index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+        index = index == 0 ? queueBuffer.length - 1 : index - 1;
+        return queueDates[index];
+    }
+
+    /** Get element added before last.
+     * If it has a SingleElement mode it returns previous state.
+     * Else if size of queue less than zero it returns DEFAULT_VALUE.
+     * @return element which was added before last or DEFAULT_VALUE
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} getPrevious()
+    {
+        if (queueType == QueueType.SINGLE_ELEMENT)
+            return previousElement;
+
+        if (size < 2)
+            return DEFAULT_VALUE;
+
+        int index = first + size;
+        index = index >= queueBuffer.length ? index - queueBuffer.length : index;
+
+        index = index < 2 ? queueBuffer.length + index - 2 : index - 2;
+        return queueBuffer[index];
+    }
+
+    /**
+     *
+     * @return period of sliding window.
+     * @throws OperationNotSupportedException if you try to use this method in non AutoDynamic mode.
+     */
+    public long getPeriod() throws OperationNotSupportedException {
+        if (queueType != QueueType.AUTO_DYNAMIC)
+            throw new OperationNotSupportedException("${name}DataQueue: Period is specified only for AUTO_DYNAMIC mode");
+        return period;
+    }
+
+    /**
+     *
+     * @return sum of values stored in the queue.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} sum() {
+        return stat.sum;
+    }
+
+    /**
+     *
+     * @return sum of squares.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} sumOfSquares() {
+        return stat.sqsum;
+    }
+
+    /**
+     *
+     * @return Sum of absolute values stored in the queue.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} sumOfAbsoluteValues() {
+        return stat.abssum;
+    }
+
+    /**
+     * http://en.wikipedia.org/wiki/Moment_(mathematics)
+     * @return estimation of distribution's First Raw Moment.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} firstRawMoment() {
+    #if (${name} == "Decimal")
+
+        return stat.sum.divideByInteger(size);
+    #elseif (${name} == "DecimalLong")
+
+        return Decimal64Utils.divideByInteger(stat.sum, size);
+    #end
+    }
+
+    /**
+     *http://en.wikipedia.org/wiki/Moment_(mathematics)
+     * @return estimation of distribution's Second Raw Moment.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} secondRawMoment() {
+    #if (${name} == "Decimal")
+
+        return stat.sqsum.divideByInteger(size);
+    #elseif (${name} == "DecimalLong")
+
+        return Decimal64Utils.divideByInteger(stat.sqsum, size);
+    #end
+    }
+
+    /**
+     * http://en.wikipedia.org/wiki/Central_moment
+     * @return estimation of distribution's Second Central Moment.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} secondCentralMoment()
+    {
+    #if (${name} == "Decimal")
+
+        Decimal64 firstRawMoment = firstRawMoment();
+        firstRawMoment = firstRawMoment.multiply(firstRawMoment);
+        return secondRawMoment().subtract(firstRawMoment);
+    #elseif (${name} == "DecimalLong")
+
+        ${type} firstRawMoment = firstRawMoment();
+        firstRawMoment = Decimal64Utils.multiply(firstRawMoment, firstRawMoment);
+        return Decimal64Utils.subtract(secondRawMoment(), firstRawMoment);
+    #end
+
+    }
+
+    /**
+     * http://en.wikipedia.org/wiki/Average#Arithmetic_mean
+     * Returns Arithmetic Mean.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} arithmeticMean() {
+    #if (${name} == "Decimal")
+
+        return stat.sum.divideByInteger(size);
+    #elseif (${name} == "DecimalLong")
+
+        return Decimal64Utils.divideByInteger(stat.sum, size);
+    #end
+    }
+
+    /**
+     * http://en.wikipedia.org/wiki/Quadratic_mean
+     * @return Quadratic Mean.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} quadraticMean() {
+    #if (${name} == "Decimal")
+
+        return sqrtDecimal64(stat.sqsum.divideByInteger(size));
+    #elseif (${name} == "DecimalLong")
+
+        return sqrtDecimal64(Decimal64Utils.divideByInteger(stat.sqsum, size));
+    #end
+
+    }
+
+    /**
+     * http://en.wikipedia.org/wiki/Expected_value
+     * @return estimation of distribution's Expected Value.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} expectedValue() {
+    #if (${name} == "Decimal")
+
+        return stat.sum.divideByInteger(size);
+    #elseif (${name} == "DecimalLong")
+
+        return Decimal64Utils.divideByInteger(stat.sum, size);
+    #end
+
+    }
+
+    /**
+     * http://en.wikipedia.org/wiki/variance
+     * @return distribution's variance, same as VariancePopulation.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} variance() {
+    #if (${name} == "Decimal")
+
+        return ((stat.sqsum.subtract(stat.sum.multiply(stat.sum).divideByInteger(size))).divideByInteger(size)).abs();
+    #elseif (${name} == "DecimalLong")
+
+        return Decimal64Utils.abs(Decimal64Utils.divideByInteger(
+                    Decimal64Utils.subtract(stat.sqsum,
+                                            Decimal64Utils.divideByInteger(Decimal64Utils.multiply(stat.sum, stat.sum),
+                                                                           size)),
+                    size));
+    #end
+
+    }
+
+    /**
+     * http://en.wikipedia.org/wiki/Standard_Deviation
+     * @return distribution's Standard Deviation, same as StandardDeviationPopulation.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} standardDeviation() {
+        return sqrtDecimal64(variance());
+    }
+
+    /**
+     * http://en.wikipedia.org/wiki/variance
+     * @return distribution's variance.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} variancePopulation() {
+        return variance();
+    }
+
+    /**
+     * http://en.wikipedia.org/wiki/variance
+     * @return estimation distribution's variance.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} varianceSample() {
+    #if (${name} == "Decimal")
+
+        return ((stat.sqsum.subtract(stat.sum.multiply(stat.sum).divideByInteger(size))).divideByInteger(size - 1)).abs();
+    #elseif (${name} == "DecimalLong")
+
+        return Decimal64Utils.abs(Decimal64Utils.divideByInteger(
+                Decimal64Utils.subtract(stat.sqsum,
+                                        Decimal64Utils.divideByInteger(Decimal64Utils.multiply(stat.sum, stat.sum),
+                                                                    size - 1)),
+                size));
+    #end
+
+    }
+
+    /**
+     * http://en.wikipedia.org/wiki/Standard_Deviation
+     * @return distribution's Standard Deviation.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} standardDeviationPopulation() {
+        return standardDeviation();
+    }
+
+    /**
+     * http://en.wikipedia.org/wiki/Standard_Deviation
+     * @return estimation of distribution's Standard Deviation.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} standardDeviationSample() {
+        return sqrtDecimal64(varianceSample());
+    }
+
+    /**
+     * http://en.wikipedia.org/wiki/Coefficient_of_variation
+     * @return Coefficient Of Variation of stored set of values.
+     */
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    public ${type} coefficientOfVariation() {
+    #if (${name} == "Decimal")
+
+        return sqrtDecimal64(((stat.sqsum.subtract(stat.sum.multiply(stat.sum).divideByInteger(size))).abs().divideByInteger(size)))
+                .divide(stat.sum.divideByInteger(size));
+    #elseif (${name} == "DecimalLong")
+
+        return Decimal64Utils.divide
+                (sqrtDecimal64
+                        (Decimal64Utils.divideByInteger(
+                                Decimal64Utils.subtract(stat.sqsum,
+                                        Decimal64Utils.divideByInteger(
+                                                Decimal64Utils.multiply(stat.sum, stat.sum),
+                                                size)),
+                                size)), Decimal64Utils.divideByInteger(stat.sum, size));
+
+    #end
+
+    }
+
+    /**
+     * Clears queue.
+     */
+    public void clear() {
+        first = size = 0;
+    }
+
+    /**
+     * Returns size of queue.
+     * @return Size.
+     */
+    public int size() {
+        return size;
+    }
+
+    /**
+     * Returns an iterator over elements of type ${type}.
+     *
+     * @return an Iterator.
+     */
+
+    public Iterator<#if (${name} == "DecimalLong")Long#else${type_Object}#end> iterator() {
+
+        return new Iterator<#if (${name} == "DecimalLong")Long#else${type_Object}#end>() {
+            int offset = 0;
+            @Override
+            public boolean hasNext() {
+                return offset < size();
+            }
+
+            @Override
+            public #if (${name} == "DecimalLong")Long#else${type_Object}#end next() {
+                offset++;
+                return queueBuffer[(first + offset - 1) % queueBuffer.length];
+
+            }
+
+            /**
+             * Removes from the underlying collection the last element returned
+             * by this iterator (optional operation).  This method can be called
+             * only once per call to {@link #next}.  The behavior of an iterator
+             * is unspecified if the underlying collection is modified while the
+             * iteration is in progress in any way other than by calling this
+             * method.
+             *
+             * @throws UnsupportedOperationException if the {@code remove}
+             *                                       operation is not supported by this iterator
+             * @throws IllegalStateException         if the {@code next} method has not
+             *                                       yet been called, or the {@code remove} method has already
+             *                                       been called after the last call to the {@code next}
+             *                                       method
+             * @implSpec The default implementation throws an instance of
+             * {@link UnsupportedOperationException} and performs no other action.
+             */
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+        };
+    }
+
+    /**
+     * Makes full copy of this instance.
+     * @return Copy of this instance.
+     */
+    public ${name}DataQueue clone() {
+        ${name}DataQueue queue = new ${name}DataQueue(queueType == QueueType.SINGLE_ELEMENT ? 1 : queueBuffer.length, calcStatistics, needTime);
+        queue.queueType = queueType;
+        copyTo(queue);
+
+        return queue;
+    }
+
+    /**
+     * Sets internal state to destination object.
+     * @param destination Destination object to put state.
+     */
+    public void copyTo(${name}DataQueue destination)
+    {
+        if (onPush != null)
+            destination.onPush = (ArrayList<BiConsumer<#if (${name} == "DecimalLong")Long#else${type_Object}#end, Long>>)onPush.clone();
+
+        if (onPop != null)
+            destination.onPop = (ArrayList<BiConsumer<#if (${name} == "DecimalLong")Long#else${type_Object}#end, Long>>)onPop.clone();
+
+        if (queueBuffer != null) {
+            if (destination.queueBuffer.length < queueBuffer.length) {
+                destination.queueBuffer = new ${type}[queueBuffer.length << 1];
+            }
+            System.arraycopy(queueBuffer, 0, destination.queueBuffer, 0, queueBuffer.length);
+        }
+        if (queueDates != null)
+        {
+            if (destination.queueDates == null)
+                destination.queueDates = queueDates.clone();
+            else
+                System.arraycopy(queueDates, 0, destination.queueDates, 0, queueDates.length);
+        }
+
+        destination.previousElement = previousElement;
+        destination.previousElementDate = previousElementDate;
+        destination.singleElement = singleElement;
+        destination.singleElementDate = singleElementDate;
+
+        destination.first = first;
+        destination.size = size;
+
+        destination.period = period;
+        destination.needTime = needTime;
+        destination.queueType = queueType;
+
+        destination.stat.sqsum = stat.sqsum;
+        destination.stat.abssum = stat.abssum;
+        destination.stat.sum = stat.sum;
+    }
+
+    #if (${name} == "DecimalLong")@Decimal#end
+
+    private ${type} sqrtDecimal64(#if (${name} == "DecimalLong")@Decimal#end ${type} value) {
+        double temp = #if (${name} == "DecimalLong")${type_Object}.toDouble(value)#else value.doubleValue()#end;
+        temp = sqrt(temp);
+        return ${type_Object}.fromDouble(temp);
+    }
+
+    /**
+     * Return true if queue is empty.
+     * @return True if queue is empty.
+     */
+    public boolean isEmpty() {
+        return size == 0;
+    }
+}
+

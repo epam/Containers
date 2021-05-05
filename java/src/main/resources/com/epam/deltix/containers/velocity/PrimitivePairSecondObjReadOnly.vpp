@@ -1,0 +1,28 @@
+package com.epam.deltix.containers.generated;
+
+#if (${name} == "Decimal")
+import com.epam.deltix.dfp.Decimal64;
+#end
+
+
+/**
+ * Public read only interface for storing pair of item's. First item is {type}, second is object.
+ */
+
+
+public interface ${name}ObjPairReadOnly<T> {
+    /**
+     * Get second item of this pair.
+     * @return Second item of this pair.
+     */
+    
+    public T getSecond();
+
+    /**
+     * Get first item of this pair.
+     * @return First item of this pair.
+     */
+    public ${type} getFirst();
+
+    public void copyTo(${name}ObjPair<T> destination);
+}
