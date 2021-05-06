@@ -2,6 +2,7 @@ apply plugin: 'java-library'
 apply plugin: 'maven-publish'
 apply plugin: 'me.champeau.gradle.jmh'
 apply plugin: 'velocity'
+apply plugin: 'signing'
 
 jmh {
     jmhVersion = '1.18'
@@ -327,27 +328,77 @@ test {
     maxHeapSize = "4g"
 }
 
+ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
+
+def rUser = findProperty('SONATYPE_NEXUS_USERNAME') ?:  System.getenv('SONATYPE_NEXUS_USERNAME') ?: "FakeUser"
+def rPass = findProperty('SONATYPE_NEXUS_PASSWORD') ?:  System.getenv('SONATYPE_NEXUS_PASSWORD') ?: "FakePass"
+
 publishing {
     repositories {
         maven {
-            url "https://packages.deltixhub.com/maven2/${findProperty('FEED_BASE_NAME') ?: 'Test'}.Java"
+            url = findProperty('SONATYPE_REPOSITORY') ?:  System.getenv('SONATYPE_REPOSITORY') ?: "FakeRepo"
+
             credentials {
-                username findProperty('PUBLISHER_USERNAME') ?: ''
-                password findProperty('PUBLISHER_PASSWORD') ?: ''
+                username rUser
+                password rPass
             }
         }
     }
 
     publications {
-        maven(MavenPublication) {
+        mavenJava(MavenPublication) {
             from components.java
-            artifact javadocJar
-            artifact sourcesJar
-            pom.withXml {
-                def topNode = asNode()
-                topNode.appendNode('description', 'Deltix collections and algorithms https://gitlab.deltixhub.com/Deltix/Containers/')
+
+            pom {
+                name = 'container'
+                packaging = 'jar'
+                description = 'Collection of handy data structures and algos for C#/Java specially designed for GC-free programming. \n' +
+                        'ObjectPools, MutableBlobs, MutableStrings, BinaryHeaps, Linked Lists, Trees, fast memory copy, fast hash calculators and others..'
+                url = 'https://github.com/epam/Containers'
+
+                scm {
+                    connection = 'scm:git:https://github.com/epam/Containers.git'
+                    developerConnection = 'scm:git:https://github.com/epam/Containers.git'
+                    url = 'https://github.com/epam/Containers.git'
+                }
+
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = 'adrapko'
+                        name = 'Aliaksandr Drapko'
+                        email = 'aliaksandr_drapko@epam.com'
+                        url = 'https://github.com/sdryapko'
+                        organization = 'EPAM Systems'
+                        organizationUrl = 'https://www.epam.com/'
+                    }
+                    developer {
+                        id = 'avavilau'
+                        name = 'Aliaksei Vavilau'
+                        email = 'aliaksei_vavilau@epam.com'
+                        url = 'https://github.com/avavilau'
+                        organization = 'EPAM Systems'
+                        organizationUrl = 'https://www.epam.com/'
+                    }
+                }
             }
         }
+    }
+
+    signing {
+        def signingKey = findProperty('SIGNING_PRIVATE_KEY') ?: System.getenv('SIGNING_PRIVATE_KEY') ?: "FakeUser"
+        def signingPassword = findProperty('SIGNING_PASSWORD') ?: System.getenv('SIGNING_PASSWORD') ?: "FakePass"
+
+        useInMemoryPgpKeys(signingKey, signingPassword)
+        sign publishing.publications.mavenJava
+
+        required { isReleaseVersion }
     }
 }
 
