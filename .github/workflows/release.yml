@@ -62,7 +62,7 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
       - name: Build with gradle
-        run: ./gradlew build
+        run: ./gradlew build test
 
   release:
     name: Release
