@@ -55,6 +55,7 @@ public interface LinkedList<T> extends LinkedListReadOnly<T> {
     /**
      * Set element with given key to new value. Costs O(1) time.
      * @param key Given key.
+     * @param value Given value.
      */
     void setElementByKey(int key, T value);
 

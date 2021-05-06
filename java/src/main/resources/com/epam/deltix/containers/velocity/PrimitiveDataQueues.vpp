@@ -732,7 +732,7 @@ sum = Decimal64Utils.subtract(sum, data);
      */
     #if (${name} == "DecimalLong")@Decimal#end
 
-    public ${type} getPointsAgo(int step) throws OperationNotSupportedException {
+    public ${type} getPointsAgo(int step) {
 
         if (queueType == QueueType.SINGLE_ELEMENT)
         {
@@ -886,7 +886,7 @@ sum = Decimal64Utils.subtract(sum, data);
      * @param t Value to set.
      * @throws IndexOutOfBoundsException if step is greater or equal than size of queue.
      */
-    public void setPointsAgo(int step, #if (${name} == "DecimalLong")@Decimal#end ${type} t) throws OperationNotSupportedException {
+    public void setPointsAgo(int step, #if (${name} == "DecimalLong")@Decimal#end ${type} t) {
         if (queueType == QueueType.SINGLE_ELEMENT)
         {
             if (step == 0)
@@ -1064,6 +1064,7 @@ sum = Decimal64Utils.subtract(sum, data);
     /**
      * Get first element time of queue or DEFAULT_TIME if queue is empty.
      * @return First element time of queue or default time.
+     * @throws OperationNotSupportedException when no time is stored
      */
     public long getFirstElementTime() throws OperationNotSupportedException {
         if (!needTime)
@@ -1081,6 +1082,7 @@ sum = Decimal64Utils.subtract(sum, data);
     /**
      * Get last element time of queue or DEFAULT_TIME if queue is empty.
      * @return Last element time of queue or default time.
+     * @throws OperationNotSupportedException when no time is stored
      */
     public long getLastElementTime() throws OperationNotSupportedException {
         if (!needTime)
@@ -1218,7 +1220,7 @@ sum = Decimal64Utils.subtract(sum, data);
 
     /**
      * http://en.wikipedia.org/wiki/Average#Arithmetic_mean
-     * Returns Arithmetic Mean.
+     * @return Arithmetic Mean value
      */
     #if (${name} == "DecimalLong")@Decimal#end
 
@@ -1234,7 +1236,7 @@ sum = Decimal64Utils.subtract(sum, data);
 
     /**
      * http://en.wikipedia.org/wiki/Quadratic_mean
-     * @return Quadratic Mean.
+     * @return Quadratic Mean
      */
     #if (${name} == "DecimalLong")@Decimal#end
 

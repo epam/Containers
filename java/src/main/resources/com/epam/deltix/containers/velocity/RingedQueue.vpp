@@ -130,8 +130,8 @@ public class ${name}RingedQueue implements Iterable<Long> {
 
     
      /**
-     * Return size of queue
-     * @return
+     * Return number of elements in this queue
+     * @return number of elements in this queue
      */
     public int size() {
         return size;

@@ -1,22 +1,19 @@
 package com.epam.deltix.containers;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.SortedSet;
 
 /**
- * Factory of generic lists. It does'nt give you direct access to lists. This collection just gives you API for work with lists.
+ * Factory of generic lists. It doesn't give you direct access to lists. This collection just gives you API for work with lists.
  * The main feature of this collection - common memory pool for all lists and elements.
  * <p>
- * <p>
- * This collection provides functionallity to register (and unregister) new linked lists(methods {@link #createList} and {@link #deleteList} ).
+ * This collection provides functionality to register (and unregister) new linked lists(methods {@link #createList} and {@link #deleteList} ).
  * {@link #createList} returns listId (it's necessary to work with list) of new list to you. This method takes O(1) time.
  * {@link #deleteList} remove all elements of list and unregister list. This method takes O(n) time, where n - number of elements in list.
  * To work with a concrete list you need to remember listId of it. Any element of lists has unique elementId.
  * ListId allows you to get elementId of first/last element ({@link #getFirst}/{@link #getLast}) of list
  * and count of elements in it ({@link #getCount}). It also allows you to insert new elements to head and to tale of list ({@link #addFirst}/{@link #addLast}).
  * All of this operations take O(1) time.
- * All operations with a concrete list identical to operations with <tt>BufferedLinkedList</tt>.
+ * All operations with a concrete list identical to operations with <code>BufferedLinkedList</code>.
  * You can get elementId of next/previous element   ({@link #getNext}/{@link #getPrevious}), value by elementId ({@link #get}),
  * insert new element before/after it ({@link #addBefore}/{@link #addAfter}), remove it ({@link #deleteElement}. All of it takes O(1) time.
  *
@@ -383,7 +380,7 @@ public class ListFactory<T> {
     /**
      * Delete list from listFactory;
      *
-     * @param listId
+     * @param listId Id of element to delete.
      */
     public void deleteList(int listId) {
         checkListContract(listId);

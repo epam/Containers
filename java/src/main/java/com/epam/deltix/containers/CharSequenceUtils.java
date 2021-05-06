@@ -20,6 +20,11 @@ public class CharSequenceUtils {
 
     /**
      * Compare two CharSequences for equality. A null equals null.
+     *
+     * @param s1 first CharSequence to compare
+     * @param s2 second CharSequence to compare
+     *
+     * @return  {@code true} if the s1 equivalent to s2, {@code false} otherwise
      */
     public static boolean equals(final CharSequence s1, final CharSequence s2) {
         if (s1 == s2) {
@@ -46,17 +51,27 @@ public class CharSequenceUtils {
 
     /**
      * Compare two CharSequences for equality. A null equals null.
+     *
+     *  @param s1 first char sequence
+     *  @param s2 seconds char sequence
+     *  @param maxLength Only compare the first <code>maxLength</code> characters.
+     *                   0 for compare all content.
+     *
+     * @return  {@code true} if the s1 equivalent to s2, {@code false} otherwise
      */
     public static boolean equals(CharSequence s1, CharSequence s2, int maxLength) {
         return (compare(s1, s2, maxLength, true) == 0);
     }
 
-
     /**
      * Compare two CharSequences for equality. Nulls are not supported.
      *
+     * @param s1 first char sequence
      * @param offset1 offset in the first char sequence
      * @param len1    useful length of the first char sequence
+     * @param s2 seconds char sequence
+     *
+     * @return  {@code true} if the s1 equivalent to s2, {@code false} otherwise
      */
     public static boolean equals(CharSequence s1, final int offset1, final int len1, CharSequence s2) {
         assert s1 != null && s2 != null;
@@ -78,9 +93,17 @@ public class CharSequenceUtils {
      * Compare two CharSequences. A null argument is always less than a non-null argument
      * and is equal to another null argument.
      *
+     * @param s1 first CharSequence to compare
+     * @param s2 second CharSequence to compare
      * @param fast When true, use a fast algorithm, which makes a
      *             char sequence greater than another if it is longer.
      *             When false, performs lexicographic comparison.
+     *
+     * @return the value {@code 0} if the argument s1 is equal to s2;
+     *         a value less than {@code 0} if s1 is lexicographically
+     *         less than the s2;
+     *         and a value greater than {@code 0} if s1 is
+     *         lexicographically greater than the s2.
      */
     public static int compare(CharSequence s1, CharSequence s2, boolean fast) {
         return (compare(s1, s2, 0, fast));
@@ -90,11 +113,19 @@ public class CharSequenceUtils {
      * Compare two CharSequences. A null argument is always less than a non-null argument
      * and is equal to another null argument.
      *
-     * @param maxLength Only compare the first <tt>maxLength</tt> characters.
+     * @param s1 first CharSequence to compare
+     * @param s2 second CharSequence to compare
+     * @param maxLength Only compare the first <code>maxLength</code> characters.
      *                  Send 0 to unlimit.
      * @param fast      When true, use a fast algorithm, which makes a
      *                  char sequence greater than another if it is longer.
      *                  When false, performs lexicographic comparison.
+     *
+     * @return the value {@code 0} if the argument s1 is equal to s2;
+     *         a value less than {@code 0} if s1 is lexicographically
+     *         less than the s2;
+     *         and a value greater than {@code 0} if s1 is
+     *         lexicographically greater than the s2.
      */
     public static int compare(
             CharSequence s1,
@@ -173,6 +204,9 @@ public class CharSequenceUtils {
      * @param targetOffset offset of the target string.
      * @param targetCount  count of the target string.
      * @param fromIndex    the index to begin searching from.
+     *
+     * @return the index of the last occurrence of the specified target,
+     *          or {@code -1} if there is no such occurrence.
      */
     public static int indexOf(CharSequence source, int sourceOffset, int sourceCount,
                               CharSequence target, int targetOffset, int targetCount,
@@ -211,7 +245,6 @@ public class CharSequenceUtils {
         return -1;
     }
 
-
     public static boolean contains(Collection<? extends CharSequence> items, CharSequence value) {
         for (CharSequence item : items)
             if (equals(item, value))
@@ -219,11 +252,17 @@ public class CharSequenceUtils {
         return false;
     }
 
-    /** @return true Source contains target */
+    /**
+     * Returns true if and only if {@code source} contains the specified {@code target}.
+     *
+     * @param source the sequence to search in
+     * @param target the sequence to search for
+     *
+     * @return true if {@code source} contains {@code target}, false otherwise
+     */
     public static boolean contains(CharSequence source, CharSequence target) {
         return indexOf(source, 0, source.length(), target, 0, target.length(), 0) > -1;
     }
-
 
     public static boolean isEmptyOrNull(CharSequence value) {
         return value == null || value.length() == 0;

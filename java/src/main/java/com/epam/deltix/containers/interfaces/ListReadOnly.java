@@ -21,7 +21,7 @@ public interface ListReadOnly<T> {
      * @param index Index of the element to return
      * @return The element at the specified position in this list.
      * @throws IndexOutOfBoundsException If the index is out of range
-     *                                   (<tt>index &lt; 0 || index &gt;= size()</tt>)
+     *                                   (<code>index &lt; 0 || index &gt;= size()</code>)
      */
     public T get(int index);
 }

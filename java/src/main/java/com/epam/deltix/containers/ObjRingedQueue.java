@@ -119,7 +119,7 @@ public class ObjRingedQueue<T> implements Iterable<T> {
 
     /**
      * Return size of queue
-     * @return
+     * @return queue size
      */
     public int size() {
         return size;
