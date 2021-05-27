@@ -37,9 +37,9 @@
     <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Deltix.Time" Version="0.2.0" />
+    <PackageReference Include="EPAM.Deltix.HdTime" Version="0.2.11" />
     <PackageReference Include="System.Memory" Version="4.5.2" />
-    <PackageReference Include="Deltix.DFP" Version="0.10.7" />
+    <PackageReference Include="EPAM.Deltix.DFP" Version="0.10.7" />
 
   </ItemGroup>
   <ItemGroup>
